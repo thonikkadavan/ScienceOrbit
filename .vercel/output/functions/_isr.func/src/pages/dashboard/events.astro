@@ -186,9 +186,12 @@ const myCalendarEvents = allEvents.filter((e) => registeredIds.has(e.id) && e.ev
 </BaseLayout>
 
 <script>
-import { createClient } from "../../lib/supabase";
+import { createBrowserClient } from "@supabase/ssr";
 
-const supabase = createClient();
+const supabase = createBrowserClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+);
 
 // Tab switching
 const tabs = document.querySelectorAll(".ev-tab");
