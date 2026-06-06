@@ -1,0 +1,357 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { createClient } from "../../lib/supabase";
+import { requireAdmin } from "../../lib/admin-auth";
+
+const supabase = createClient({ request: Astro.request, cookies: Astro.cookies });
+const admin = await requireAdmin(supabase);
+if (!admin) return Astro.redirect("/login");
+---
+
+<AdminLayout title="Identity Manager" activeTab="identity-manager">
+  <h1>Global Identity &amp; Account Manager</h1>
+  <p class="subtitle">Manage mentors, validate achievements, and oversee identity records</p>
+
+  <div class="gov-tabs">
+    <button class="gov-tab active" data-tab="mentors">Mentor Directory</button>
+    <button class="gov-tab" data-tab="achievements">Achievement Validator</button>
+  </div>
+
+  <!-- Mentor Directory -->
+  <div class="gov-panel active" id="panel-mentors">
+    <div class="neu-card" style="margin-bottom:1rem">
+      <form id="add-mentor-form" style="display:flex;gap:0.5rem;align-items:center">
+        <div class="neu-input-wrap" style="flex:1">
+          <input type="text" id="mentor-name" required placeholder="Mentor full name..." />
+        </div>
+        <button type="submit" class="btn-neu"><span class="material-symbols-outlined" style="font-size:16px">add</span> Add Mentor</button>
+      </form>
+      <p id="mentor-error" class="error-msg"></p>
+    </div>
+    <div id="mentors-container"><p class="loading">Loading mentors...</p></div>
+  </div>
+
+  <!-- Achievement Validator -->
+  <div class="gov-panel" id="panel-achievements">
+    <div class="gov-toolbar">
+      <div class="neu-input-wrap" style="flex:1;max-width:320px">
+        <input type="text" id="achievement-search" placeholder="Search by name or username..." />
+      </div>
+      <button class="btn-neu btn-neu-sm" id="refresh-achievements"><span class="material-symbols-outlined" style="font-size:16px">refresh</span> Refresh</button>
+    </div>
+    <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+      <button class="gov-tab-slim active" data-ach-view="pending">Pending Submissions</button>
+      <button class="gov-tab-slim" data-ach-view="all">All Milestones</button>
+    </div>
+    <div id="achievements-container"><p class="loading">Loading profiles...</p></div>
+  </div>
+</AdminLayout>
+
+<style is:global>
+  .gov-tabs { display:flex; gap:0; margin-bottom:1.5rem; box-shadow:var(--shadow-recessed); border-radius:var(--radius-xl); overflow:hidden; }
+  .gov-tab { flex:1; padding:0.75rem 1rem; border:none; background:transparent; color:var(--color-on-surface-variant); font-family:var(--font-label); font-size:13px; font-weight:600; cursor:pointer; letter-spacing:0.03em; transition:all 0.15s; text-align:center; }
+  .gov-tab.active { box-shadow:var(--shadow-extruded-sm); color:var(--color-primary); }
+  .gov-tab:hover:not(.active) { color:var(--color-on-surface); }
+  .gov-panel { display:none; }
+  .gov-panel.active { display:block; }
+  .gov-toolbar { display:flex; gap:0.5rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap; }
+  .gov-tab-slim { padding:0.4rem 1rem; border:none; background:transparent; color:var(--color-on-surface-variant); font-family:var(--font-label); font-size:12px; font-weight:600; cursor:pointer; letter-spacing:0.03em; transition:all 0.15s; border-radius:var(--radius-default); }
+  .gov-tab-slim.active { box-shadow:var(--shadow-extruded-sm); color:var(--color-primary); }
+  .gov-tab-slim:hover:not(.active) { color:var(--color-on-surface); }
+  .ach-card { padding:1rem; margin-bottom:0.75rem; border-radius:var(--radius-md); box-shadow:var(--shadow-extruded-sm); }
+  .ach-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; }
+  .ach-name { font-weight:600; font-size:15px; color:var(--color-on-surface); }
+  .ach-meta { font-size:12px; color:var(--color-on-surface-variant); }
+  .ach-milestones { display:flex; flex-direction:column; gap:0.35rem; }
+  .milestone-row { display:flex; align-items:center; gap:0.5rem; padding:0.35rem 0.5rem; border-radius:var(--radius-sm); background:rgba(255,255,255,0.02); }
+  .milestone-row.verified { opacity:0.7; }
+  .milestone-idx { font-size:11px; font-weight:700; color:var(--color-on-surface-variant); min-width:24px; }
+  .milestone-title { flex:1; font-size:13px; color:var(--color-on-surface); }
+</style>
+
+<script>
+  import { createBrowserClient } from "@supabase/ssr";
+  function getSupabase() {
+    return createBrowserClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+    );
+  }
+  function escapeHtml(str) {
+    if (!str) return "";
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+  function errMsg(err) {
+    return err instanceof Error ? err.message : typeof err === "string" ? err : "Request failed. Check console for details.";
+  }
+  const supabase = getSupabase();
+
+  document.querySelectorAll(".gov-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".gov-tab").forEach((t) => t.classList.remove("active"));
+      document.querySelectorAll(".gov-panel").forEach((p) => p.classList.remove("active"));
+      tab.classList.add("active");
+      document.getElementById("panel-" + tab.getAttribute("data-tab"))?.classList.add("active");
+    });
+  });
+
+  /* ── Mentors ── */
+  async function loadMentors() {
+    const container = document.getElementById("mentors-container");
+    if (!container) return;
+    try {
+      const { data, error } = await supabase
+        .from("mentors")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="empty-state">No mentors registered yet.</div>';
+        return;
+      }
+      container.innerHTML = `
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Created</th><th>Action</th></tr></thead>
+            <tbody>
+              ${data
+                .map(
+                  (m) => `
+                <tr>
+                  <td><strong>${escapeHtml(m.name)}</strong></td>
+                  <td>${new Date(m.created_at).toLocaleDateString()}</td>
+                  <td><button class="btn-neu btn-neu-sm danger" data-id="${m.id}" data-name="${escapeHtml(m.name)}">Delete</button></td>
+                </tr>
+              `
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+      container.querySelectorAll(".btn-neu.danger").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const name = btn.getAttribute("data-name");
+          if (!confirm(`Delete mentor "${name}"? This may affect student profiles.`)) return;
+          const id = btn.getAttribute("data-id");
+          btn.disabled = true;
+          btn.textContent = "Deleting...";
+          try {
+            const { error } = await supabase.from("mentors").delete().eq("id", id);
+            if (error) throw error;
+            btn.closest("tr")?.remove();
+            const tbody = container.querySelector("tbody");
+            if (tbody && tbody.children.length === 0) {
+              container.innerHTML = '<div class="empty-state">No mentors registered yet.</div>';
+            }
+          } catch (err) {
+            console.error("IdentityManager mentorDelete:", err);
+            btn.disabled = false;
+            btn.textContent = "Delete";
+            alert("Failed: " + errMsg(err));
+          }
+        });
+      });
+    } catch (err) {
+      console.error("IdentityManager loadMentors:", err);
+      container.innerHTML = `<div class="error-state">Failed to load: ${errMsg(err)}</div>`;
+    }
+  }
+
+  document.getElementById("add-mentor-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = document.getElementById("mentor-name");
+    const errorEl = document.getElementById("mentor-error");
+    if (!input || !errorEl) return;
+    errorEl.textContent = "";
+    const name = input.value.trim();
+    if (!name) return;
+    input.disabled = true;
+    try {
+      const { error } = await supabase.from("mentors").insert({ name });
+      if (error) throw error;
+      input.value = "";
+      loadMentors();
+    } catch (err) {
+      console.error("IdentityManager addMentor:", err);
+      errorEl.textContent = errMsg(err);
+    } finally {
+      input.disabled = false;
+      input.focus();
+    }
+  });
+
+  /* ── Achievements ── */
+  let achCache = [];
+  let achView = "pending";
+
+  document.querySelectorAll("[data-ach-view]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("[data-ach-view]").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      achView = btn.getAttribute("data-ach-view");
+      renderAchievements(document.getElementById("achievement-search")?.value || "");
+    });
+  });
+
+  async function loadAchievements() {
+    const container = document.getElementById("achievements-container");
+    if (!container) return;
+    try {
+      const { data: profiles, error: pErr } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, legal_name, milestones, campuses(name)")
+        .not("milestones", "eq", "[]")
+        .order("created_at", { ascending: false });
+      if (pErr) throw pErr;
+
+      const { data: verifications, error: vErr } = await supabase
+        .from("achievement_verifications")
+        .select("*");
+      if (vErr) throw vErr;
+
+      achCache = { profiles: profiles || [], verifications: verifications || [] };
+      renderAchievements("");
+    } catch (err) {
+      console.error("IdentityManager loadAchievements:", err);
+      container.innerHTML = `<div class="error-state">Failed to load: ${errMsg(err)}</div>`;
+    }
+  }
+
+  function renderAchievements(filter) {
+    const container = document.getElementById("achievements-container");
+    if (!container) return;
+    const { profiles, verifications } = achCache;
+    if (!profiles || profiles.length === 0) {
+      container.innerHTML = '<div class="empty-state">No profiles with milestones found.</div>';
+      return;
+    }
+
+    const filtered = filter
+      ? profiles.filter(
+          (p) =>
+            (p.display_name || p.username || "").toLowerCase().includes(filter.toLowerCase()) ||
+            (p.legal_name || "").toLowerCase().includes(filter.toLowerCase())
+        )
+      : profiles;
+
+    const allRows = [];
+    for (const p of filtered) {
+      const milestones = Array.isArray(p.milestones) ? p.milestones : [];
+      for (let i = 0; i < milestones.length; i++) {
+        const m = milestones[i];
+        const v = (verifications || []).find(
+          (v) => v.profile_id === p.id && v.milestone_index === i
+        );
+        const isVerified = v?.is_verified || false;
+        if (achView === "pending" && isVerified) continue;
+        allRows.push({
+          profileId: p.id,
+          username: p.username || "—",
+          displayName: p.display_name || p.legal_name || p.username || "Unknown",
+          campus: p.campuses?.name || "—",
+          idx: i,
+          title: m.title || "Milestone " + (i + 1),
+          credentialUrl: m.credential_url || "",
+          isVerified,
+          verifiedAt: v?.verified_at || null,
+        });
+      }
+    }
+
+    if (allRows.length === 0) {
+      const msg = achView === "pending"
+        ? "No pending submissions. All milestones verified."
+        : "No milestones found.";
+      container.innerHTML = `<div class="empty-state">${msg}</div>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <div style="margin-bottom:0.5rem;font-size:12px;color:var(--color-on-surface-variant)">${allRows.length} submission${allRows.length === 1 ? "" : "s"}</div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead><tr>
+            <th>Student ID</th>
+            <th>Name</th>
+            <th>Milestone</th>
+            <th>Proof</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr></thead>
+          <tbody>
+            ${allRows.map((r) => `
+              <tr>
+                <td><code style="color:var(--color-primary)">${escapeHtml(r.username)}</code></td>
+                <td><strong>${escapeHtml(r.displayName)}</strong></td>
+                <td>${escapeHtml(r.title)}</td>
+                <td>${r.credentialUrl
+                  ? `<a href="${escapeHtml(r.credentialUrl)}" target="_blank" class="btn-neu btn-neu-sm" style="text-decoration:none;font-size:11px"><span class="material-symbols-outlined" style="font-size:14px">open_in_new</span> View</a>`
+                  : '<span style="color:var(--color-on-surface-variant);font-size:12px">No proof</span>'
+                }</td>
+                <td>
+                  <span class="status-badge">
+                    <span class="status-dot ${r.isVerified ? "approved" : "pending"}"></span>
+                    <span class="status-label ${r.isVerified ? "approved" : "pending"}">${r.isVerified ? "Verified" : "Pending"}</span>
+                  </span>
+                  ${r.verifiedAt ? `<br><small style="font-size:10px;color:var(--color-on-surface-variant)">${new Date(r.verifiedAt).toLocaleDateString()}</small>` : ""}
+                </td>
+                <td>
+                  <div style="display:flex;gap:0.35rem">
+                    ${!r.isVerified
+                      ? `<button class="btn-neu btn-neu-sm" data-action="approve" data-profile="${r.profileId}" data-idx="${r.idx}">Approve &amp; Sign</button>`
+                      : `<button class="btn-neu btn-neu-sm danger" data-action="revoke" data-profile="${r.profileId}" data-idx="${r.idx}">Revoke</button>`
+                    }
+                  </div>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    container.querySelectorAll("[data-action]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const action = btn.getAttribute("data-action");
+        const profileId = btn.getAttribute("data-profile");
+        const idx = parseInt(btn.getAttribute("data-idx"));
+        btn.disabled = true;
+        try {
+          const { data: userData } = await supabase.auth.getUser();
+          const adminId = userData?.user?.id;
+          if (action === "revoke") {
+            await supabase
+              .from("achievement_verifications")
+              .delete()
+              .eq("profile_id", profileId)
+              .eq("milestone_index", idx);
+          } else {
+            await supabase.from("achievement_verifications").upsert({
+              profile_id: profileId,
+              milestone_index: idx,
+              is_verified: true,
+              verified_by: adminId,
+              verified_at: new Date().toISOString(),
+            }, { onConflict: "profile_id, milestone_index" });
+          }
+          loadAchievements();
+        } catch (err) {
+          console.error("IdentityManager verify action:", err);
+          btn.disabled = false;
+          alert("Failed: " + errMsg(err));
+        }
+      });
+    });
+  }
+
+  document.getElementById("achievement-search")?.addEventListener("input", (e) => {
+    renderAchievements(e.target.value);
+  });
+  document.getElementById("refresh-achievements")?.addEventListener("click", loadAchievements);
+
+  loadMentors();
+  loadAchievements();
+</script>

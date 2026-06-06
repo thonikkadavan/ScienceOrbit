@@ -1,0 +1,220 @@
+---
+import { createClient } from "../lib/supabase";
+
+export interface Props {
+  current: "feed" | "portfolio" | "events" | "edit" | "settings";
+}
+
+const { current } = Astro.props;
+
+const supabase = createClient({ request: Astro.request, cookies: Astro.cookies });
+const { data: { user } } = await supabase.auth.getUser();
+const avatarUrl = user?.user_metadata?.avatar_url
+  ? supabase.storage.from("avatars").getPublicUrl(user.user_metadata.avatar_url).data.publicUrl
+  : null;
+---
+
+<aside class="ds-sidebar">
+  <div class="ds-brand">
+    <a href="/dashboard/feed"><img src="/logo.png" alt="Science Orbit" class="ds-brand-img" /></a>
+    <div class="ds-brand-text">
+      <span class="ds-brand-title">Science Orbit</span>
+      <span class="ds-brand-sub">Digital Laboratory</span>
+    </div>
+  </div>
+
+  <nav class="ds-nav">
+    <a href="/dashboard/feed" class="ds-nav-item {current === 'feed' ? 'active' : ''}">
+      <span class="material-symbols-outlined ds-nav-icon">dynamic_feed</span>
+      <span class="ds-nav-label">Feed</span>
+    </a>
+    <a href="/dashboard" class="ds-nav-item {current === 'portfolio' ? 'active' : ''}">
+      <span class="material-symbols-outlined ds-nav-icon">account_circle</span>
+      <span class="ds-nav-label">Portfolio</span>
+    </a>
+    <a href="/dashboard/events" class="ds-nav-item {current === 'events' ? 'active' : ''}">
+      <span class="material-symbols-outlined ds-nav-icon">calendar_today</span>
+      <span class="ds-nav-label">Events</span>
+    </a>
+  </nav>
+
+  <div class="ds-spacer"></div>
+
+  <nav class="ds-nav">
+    <a href="/dashboard/settings" class="ds-nav-item {current === 'settings' ? 'active' : ''}">
+      <span class="material-symbols-outlined ds-nav-icon">settings</span>
+      <span class="ds-nav-label">Settings</span>
+    </a>
+    <a href="#" class="ds-nav-item">
+      <span class="material-symbols-outlined ds-nav-icon">help_outline</span>
+      <span class="ds-nav-label">Help</span>
+    </a>
+    <button id="logout-btn" class="ds-nav-item ds-logout-btn">
+      <span class="material-symbols-outlined ds-nav-icon">logout</span>
+      <span class="ds-nav-label">Logout</span>
+    </button>
+  </nav>
+</aside>
+
+<script>
+  import { createBrowserClient } from "@supabase/ssr";
+  document.getElementById("logout-btn")?.addEventListener("click", async () => {
+    const supabase = createBrowserClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+    );
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  });
+
+</script>
+
+<style is:global>
+  .ds-sidebar {
+    width: 64px;
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    background: var(--color-surface);
+    box-shadow: 2px 0 12px rgba(0,0,0,0.04);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 0.5rem;
+    z-index: 40;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: width 0.2s ease;
+  }
+
+  .ds-sidebar:hover {
+    width: 240px;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.08);
+  }
+
+  .ds-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    padding: 0 0.5rem;
+  }
+
+  .ds-brand-img {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .ds-brand-text { 
+    display: flex; 
+    flex-direction: column; 
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .ds-sidebar:hover .ds-brand-text {
+    opacity: 1;
+  }
+
+  .ds-brand-title {
+    font-family: var(--font-headline);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-primary);
+    line-height: 1.2;
+  }
+
+  .ds-brand-sub {
+    font-family: var(--font-label);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-on-surface-variant);
+    opacity: 0.7;
+  }
+
+  .ds-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .ds-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem;
+    border-radius: var(--radius-default);
+    color: var(--color-on-surface-variant);
+    text-decoration: none;
+    font-family: var(--font-label);
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .ds-nav-item:hover {
+    background: var(--color-surface-container-high);
+    color: var(--color-on-surface);
+    text-decoration: none;
+  }
+
+  .ds-nav-item.active {
+    box-shadow: var(--shadow-recessed);
+    background: var(--color-surface-container);
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  .ds-nav-item.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 60%;
+    border-radius: 4px;
+    background: var(--color-primary);
+    box-shadow: var(--shadow-extruded);
+  }
+
+  .ds-nav-icon { font-size: 1.25rem; flex-shrink: 0; }
+
+  .ds-nav-label {
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .ds-sidebar:hover .ds-nav-label {
+    opacity: 1;
+  }
+
+  .ds-spacer { flex: 1; }
+
+  .ds-logout-btn {
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-family: var(--font-label);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-on-surface-variant);
+    flex-shrink: 0;
+  }
+
+  .ds-logout-btn:hover {
+    background: var(--color-surface-container-high);
+    color: var(--color-error);
+  }
+
+  @media (max-width: 1024px) {
+    .ds-sidebar { display: none; }
+  }
+</style>

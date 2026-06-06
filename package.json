@@ -1,0 +1,17 @@
+{
+  "name": "science-orbit",
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.2.0",
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.49.0",
+    "astro": "^5.7.0"
+  }
+}

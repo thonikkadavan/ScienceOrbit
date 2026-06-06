@@ -1,0 +1,266 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+
+export interface Props {
+  title?: string;
+  avatarUrl?: string | null;
+}
+
+const { title, avatarUrl } = Astro.props;
+---
+
+<BaseLayout title={title}>
+  <header class="dash-topnav">
+    <div class="dash-topnav-inner">
+      <div class="dash-topnav-left">
+        <span class="dash-logo">Science Orbit</span>
+        <nav class="dash-nav-links">
+          <a href="/dashboard/feed">Feed</a>
+          <a href="/dashboard">Portfolio</a>
+          <a href="/dashboard/edit">Edit Profile</a>
+        </nav>
+      </div>
+      <div class="dash-topnav-right">
+        <button class="dash-icon-btn" aria-label="Notifications">
+          <span class="material-symbols-outlined">notifications</span>
+        </button>
+        <button class="dash-icon-btn" aria-label="Settings">
+          <span class="material-symbols-outlined">settings</span>
+        </button>
+        <div class="dash-avatar-wrap">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="Profile" class="dash-avatar" />
+          ) : (
+            <div class="dash-avatar-placeholder">
+              <span class="material-symbols-outlined">person</span>
+            </div>
+          )}
+        </div>
+        <button id="logout-btn" class="dash-logout-btn">Logout</button>
+      </div>
+    </div>
+  </header>
+  <main class="dash-main">
+    <slot />
+  </main>
+  <footer class="dash-footer">
+    <div class="dash-footer-inner">
+      <div class="dash-footer-brand">Science Orbit</div>
+      <div class="dash-footer-links">
+        <a href="#">Academic Integrity</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Contact Support</a>
+      </div>
+      <div class="dash-footer-copy">&copy; 2024 Science Orbit Digital Laboratory. All rights reserved.</div>
+    </div>
+  </footer>
+</BaseLayout>
+
+<script>
+  import { createBrowserClient } from "@supabase/ssr";
+  const logoutBtn = document.getElementById("logout-btn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      const supabase = createBrowserClient(
+        import.meta.env.PUBLIC_SUPABASE_URL,
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+      );
+      await supabase.auth.signOut();
+      window.location.href = "/login";
+    });
+  }
+</script>
+
+<style is:global>
+  .dash-topnav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    width: 100%;
+    background: var(--color-background);
+    box-shadow: var(--shadow-extruded-light);
+  }
+
+  .dash-topnav-inner {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 1rem var(--space-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .dash-topnav-left {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .dash-logo {
+    font-family: var(--font-headline);
+    font-size: var(--font-size-headline-md);
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+
+  .dash-nav-links {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .dash-nav-links a {
+    font-family: var(--font-label);
+    font-size: var(--font-size-label-md);
+    font-weight: var(--font-weight-label-md);
+    color: var(--color-on-surface-variant);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .dash-nav-links a:hover,
+  .dash-nav-links a.active {
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  .dash-nav-links a.active {
+    border-bottom: 2px solid var(--color-primary);
+    padding-bottom: 2px;
+  }
+
+  .dash-topnav-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .dash-icon-btn {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+  }
+
+  .dash-icon-btn:hover {
+    color: var(--color-primary-container);
+  }
+
+  .dash-avatar-wrap {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: var(--shadow-extruded);
+    border: 2px solid var(--color-background);
+  }
+
+  .dash-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .dash-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--color-surface-container-high);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-outline);
+  }
+
+  .dash-avatar-placeholder .material-symbols-outlined {
+    font-size: 1.25rem;
+  }
+
+  .dash-logout-btn {
+    background: var(--color-neu-base);
+    border: none;
+    color: var(--color-on-surface-variant);
+    padding: 0.5rem 1.25rem;
+    border-radius: var(--radius-default);
+    font-size: var(--font-size-label-md);
+    font-weight: var(--font-weight-label-md);
+    font-family: var(--font-label);
+    box-shadow: var(--shadow-extruded-sm);
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+
+  .dash-logout-btn:hover {
+    box-shadow: var(--shadow-extruded-hover);
+    color: var(--color-primary);
+  }
+
+  .dash-logout-btn:active {
+    box-shadow: var(--shadow-recessed);
+  }
+
+  .dash-main {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 3rem var(--space-md);
+    min-height: calc(100vh - 200px);
+  }
+
+  .dash-footer {
+    width: 100%;
+    margin-top: auto;
+    border-top: 1px solid var(--color-outline-variant);
+    background: var(--color-surface-container-low);
+  }
+
+  .dash-footer-inner {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 3rem var(--space-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  @media (min-width: 768px) {
+    .dash-footer-inner {
+      flex-direction: row;
+      justify-content: space-between;
+    }
+  }
+
+  .dash-footer-brand {
+    font-family: var(--font-headline);
+    font-size: var(--font-size-headline-md);
+    color: var(--color-on-surface-variant);
+  }
+
+  .dash-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem;
+  }
+
+  .dash-footer-links a {
+    font-family: var(--font-label);
+    font-size: var(--font-size-label-sm);
+    color: var(--color-on-surface-variant);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .dash-footer-links a:hover {
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  .dash-footer-copy {
+    font-size: var(--font-size-body-md);
+    color: var(--color-on-surface-variant);
+  }
+</style>
