@@ -3,11 +3,7 @@ import vercel from "@astrojs/vercel";
 
 export default defineConfig({
   output: "server",
-  adapter: vercel({
-    isr: {
-      expiration: 60,
-    },
-  }),
+  adapter: vercel(),
   vite: {
     optimizeDeps: {
       include: ["cookie", "@supabase/ssr"],
