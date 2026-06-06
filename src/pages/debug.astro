@@ -1,0 +1,32 @@
+---
+let message = "ok";
+let stack = "";
+try {
+  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl) message = "MISSING_URL";
+  else if (!supabaseAnonKey) message = "MISSING_KEY";
+  else {
+    const { createServerClient, parseCookieHeader } = await import("@supabase/ssr");
+    const client = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() { return parseCookieHeader(Astro.request.headers.get("Cookie") ?? ""); },
+        setAll() {},
+      },
+    });
+    const { data, error } = await client.auth.getUser();
+    if (error) { message = "AUTH_ERR: " + error.message; stack = error.stack; }
+    else { message = "OK user=" + (data?.user?.id ?? "none"); }
+  }
+} catch (e: any) {
+  message = "EXN: " + (e?.message ?? String(e));
+  stack = e?.stack ?? "";
+}
+---
+<html><body>
+<h1>Debug</h1>
+<pre>PUBLIC_SUPABASE_URL: {import.meta.env.PUBLIC_SUPABASE_URL ? "SET" : "MISSING"}</pre>
+<pre>PUBLIC_SUPABASE_ANON_KEY: {import.meta.env.PUBLIC_SUPABASE_ANON_KEY ? "SET" : "MISSING"}</pre>
+<pre>Result: {message}</pre>
+{stack && <pre style="white-space:pre-wrap;font-size:12px">{stack}</pre>}
+</body></html>
