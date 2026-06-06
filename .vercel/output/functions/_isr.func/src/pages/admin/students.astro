@@ -1,0 +1,278 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { createClient } from "../../lib/supabase";
+import { requireAdmin } from "../../lib/admin-auth";
+import type { Campus } from "../../types/database";
+
+const supabase = createClient({ request: Astro.request, cookies: Astro.cookies });
+const admin = await requireAdmin(supabase);
+if (!admin) return Astro.redirect("/login");
+
+const campuses = (
+  await supabase.from("campuses").select("*").order("name")
+).data as Campus[] | null;
+---
+
+<AdminLayout title="Student Directory" activeTab="students">
+  <div class="w-full" style="max-width:1200px;margin:0 auto">
+    <h1>Student Directory</h1>
+    <p class="subtitle">Manage all registered students across planetary campuses.</p>
+
+    <div id="students-container">
+      <p class="loading">Loading...</p>
+    </div>
+  </div>
+</AdminLayout>
+
+<div id="campuses-data" data-campuses={JSON.stringify(campuses ?? [])} style="display:none"></div>
+
+<script>
+  import { createBrowserClient } from "@supabase/ssr";
+  function getSupabase() {
+    return createBrowserClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+    );
+  }
+
+  async function loadStudents() {
+    const container = document.getElementById("students-container");
+    if (!container) return;
+
+    try {
+      const supabase = await getSupabase();
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*, campuses(name)")
+        .eq("is_admin", false)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        container.innerHTML =
+          '<div class="empty-state">No students registered yet.</div>';
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Legal Name</th>
+                <th>Campus</th>
+                <th>Status</th>
+                <th style="text-align:right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data
+                .map(
+                  (p) => `
+                <tr data-id="${p.id}">
+                  <td><strong style="color:var(--color-primary-fixed)">@${escapeHtml(p.username)}</strong></td>
+                  <td class="editable-name">
+                    <span class="name-display">${escapeHtml(p.legal_name || "\u2014")}</span>
+                    <input class="name-input" style="display:none" value="${escapeHtml(p.legal_name || "")}" />
+                  </td>
+                  <td>
+                    <span class="campus-display campus-tag">${escapeHtml(p.campuses?.name || "\u2014")}</span>
+                    <select class="campus-select" style="display:none">
+                      ${JSON.parse(document.getElementById('campuses-data').getAttribute('data-campuses'))
+                        .map(
+                          (c) =>
+                            `<option value="${c.id}" ${c.id === p.campus_id ? "selected" : ""}>${escapeHtml(c.name)}</option>`
+                        )
+                        .join("")}
+                    </select>
+                  </td>
+                  <td>
+                    <div class="status-badge">
+                      <span class="status-dot ${p.is_approved ? "approved" : "pending"}"></span>
+                      <span class="status-label ${p.is_approved ? "approved" : "pending"}">
+                        ${p.is_approved ? "Approved" : "Pending"}
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="action-btns">
+                      <button class="btn-icon-neu btn-edit-name" title="Edit Name"><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
+                      <button class="btn-icon-neu btn-edit-campus" title="Edit Campus"><span class="material-symbols-outlined" style="font-size:18px">domain</span></button>
+                      <button class="btn-icon-neu btn-save" style="display:none"><span class="material-symbols-outlined" style="font-size:18px">check</span></button>
+                      <button class="btn-icon-neu btn-cancel" style="display:none"><span class="material-symbols-outlined" style="font-size:18px">close</span></button>
+                      <button class="btn-icon-neu danger btn-delete" title="Delete User"><span class="material-symbols-outlined" style="font-size:18px">delete</span></button>
+                    </div>
+                  </td>
+                </tr>
+              `
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      attachHandlers();
+    } catch (err) {
+      container.innerHTML = `<div class="error-state">Failed to load: ${err instanceof Error ? err.message : "Unknown error"}</div>`;
+    }
+  }
+
+  function attachHandlers() {
+    const supabasePromise = getSupabase();
+
+    document.querySelectorAll(".btn-delete").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("Delete this user permanently? This cannot be undone."))
+          return;
+
+        const row = btn.closest("tr");
+        const id = row?.getAttribute("data-id");
+        if (!id) return;
+
+        btn.disabled = true;
+        btn.style.opacity = "0.5";
+
+        try {
+          const supabase = await supabasePromise;
+
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("avatar_url")
+            .eq("id", id)
+            .single();
+
+          if (profile?.avatar_url) {
+            await supabase.storage
+              .from("avatars")
+              .remove([profile.avatar_url]);
+          }
+
+          const { error: deleteError } = await supabase
+            .from("profiles")
+            .delete()
+            .eq("id", id);
+
+          if (deleteError) throw deleteError;
+
+          row?.remove();
+          const tbody = document.querySelector("tbody");
+          if (tbody && tbody.children.length === 0) {
+            document.getElementById("students-container").innerHTML =
+              '<div class="empty-state">No students registered yet.</div>';
+          }
+        } catch (err) {
+          btn.disabled = false;
+          btn.style.opacity = "1";
+          alert("Failed to delete: " + (err instanceof Error ? err.message : "Unknown error"));
+        }
+      });
+    });
+
+    document.querySelectorAll(".btn-edit-name").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const row = btn.closest("tr");
+        const cell = row?.querySelector(".editable-name");
+        if (!cell) return;
+
+        cell.querySelector(".name-display").style.display = "none";
+        cell.querySelector(".name-input").style.display = "block";
+        btn.style.display = "none";
+        row.querySelector(".btn-edit-campus").style.display = "none";
+        row.querySelector(".btn-delete").style.display = "none";
+        row.querySelector(".btn-save").style.display = "";
+        row.querySelector(".btn-cancel").style.display = "";
+      });
+    });
+
+    document.querySelectorAll(".btn-edit-campus").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const row = btn.closest("tr");
+        const cell = row?.querySelector("td:nth-child(3)");
+        if (!cell) return;
+
+        cell.querySelector(".campus-display").style.display = "none";
+        cell.querySelector(".campus-select").style.display = "block";
+        btn.style.display = "none";
+        row.querySelector(".btn-edit-name").style.display = "none";
+        row.querySelector(".btn-delete").style.display = "none";
+        row.querySelector(".btn-save").style.display = "";
+        row.querySelector(".btn-cancel").style.display = "";
+      });
+    });
+
+    document.querySelectorAll(".btn-cancel").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const row = btn.closest("tr");
+        resetRow(row);
+      });
+    });
+
+    document.querySelectorAll(".btn-save").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const row = btn.closest("tr");
+        const id = row?.getAttribute("data-id");
+        if (!id) return;
+
+        btn.disabled = true;
+        btn.style.opacity = "0.5";
+
+        try {
+          const supabase = await supabasePromise;
+          const updates = {};
+
+          const nameInput = row?.querySelector(".name-input") as HTMLInputElement;
+          if (nameInput && nameInput.style.display !== "none") {
+            updates.legal_name = nameInput.value.trim();
+          }
+
+          const campusSelect = row?.querySelector(
+            ".campus-select"
+          ) as HTMLSelectElement;
+          if (campusSelect && campusSelect.style.display !== "none") {
+            updates.campus_id = campusSelect.value;
+          }
+
+          const { error } = await supabase
+            .from("profiles")
+            .update(updates)
+            .eq("id", id);
+
+          if (error) throw error;
+
+          resetRow(row);
+          loadStudents();
+        } catch (err) {
+          btn.disabled = false;
+          btn.style.opacity = "1";
+          alert("Failed to save: " + (err instanceof Error ? err.message : "Unknown error"));
+        }
+      });
+    });
+  }
+
+  function resetRow(row) {
+    if (!row) return;
+    row.querySelector(".name-display").style.display = "";
+    row.querySelector(".name-input").style.display = "none";
+    row.querySelector(".campus-display").style.display = "";
+    row.querySelector(".campus-select").style.display = "none";
+    row.querySelector(".btn-edit-name").style.display = "";
+    row.querySelector(".btn-edit-campus").style.display = "";
+    row.querySelector(".btn-delete").style.display = "";
+    row.querySelector(".btn-save").style.display = "none";
+    row.querySelector(".btn-cancel").style.display = "none";
+  }
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  loadStudents();
+</script>

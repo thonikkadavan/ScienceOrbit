@@ -1,0 +1,428 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { createClient } from "../../lib/supabase";
+import { requireAdmin } from "../../lib/admin-auth";
+
+const supabase = createClient({ request: Astro.request, cookies: Astro.cookies });
+const admin = await requireAdmin(supabase);
+if (!admin) return Astro.redirect("/login");
+---
+
+<AdminLayout title="Feed Governance" activeTab="feed-governance">
+  <h1>Feed &amp; Post Governance</h1>
+  <p class="subtitle">Moderate posts, manage trending topics, and curate featured members</p>
+
+  <!-- Tab Bar -->
+  <div class="gov-tabs">
+    <button class="gov-tab active" data-tab="posts">Post Moderator</button>
+    <button class="gov-tab" data-tab="trending">Trending Topics</button>
+    <button class="gov-tab" data-tab="featured">Featured Members</button>
+  </div>
+
+  <!-- Post Moderator Panel -->
+  <div class="gov-panel active" id="panel-posts">
+    <div class="gov-toolbar">
+      <div class="neu-input-wrap" style="flex:1;max-width:320px">
+        <input type="text" id="post-search" placeholder="Search posts..." />
+      </div>
+      <button class="btn-neu btn-neu-sm" id="refresh-posts"><span class="material-symbols-outlined" style="font-size:16px">refresh</span> Refresh</button>
+    </div>
+    <div id="posts-container"><p class="loading">Loading posts...</p></div>
+  </div>
+
+  <!-- Trending Topics Panel -->
+  <div class="gov-panel" id="panel-trending">
+    <div class="neu-card" style="margin-bottom:1rem">
+      <form id="add-topic-form" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+        <div class="neu-input-wrap" style="flex:1;min-width:140px">
+          <input type="text" id="topic-hashtag" required placeholder="#hashtag" />
+        </div>
+        <div class="neu-input-wrap" style="flex:1;min-width:120px">
+          <input type="text" id="topic-count" placeholder="Display count (e.g. 1.2k)" />
+        </div>
+        <button type="submit" class="btn-neu"><span class="material-symbols-outlined" style="font-size:16px">add</span> Add Topic</button>
+      </form>
+      <p id="topic-error" class="error-msg"></p>
+    </div>
+    <div id="topics-container"><p class="loading">Loading topics...</p></div>
+  </div>
+
+  <!-- Featured Members Panel -->
+  <div class="gov-panel" id="panel-featured">
+    <div class="neu-card" style="margin-bottom:1rem">
+      <form id="add-featured-form" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+        <div class="neu-input-wrap" style="flex:1;min-width:200px">
+          <input type="text" id="featured-user-id" required placeholder="User UUID" />
+        </div>
+        <button type="submit" class="btn-neu"><span class="material-symbols-outlined" style="font-size:16px">add</span> Add Member</button>
+      </form>
+      <p id="featured-error" class="error-msg"></p>
+    </div>
+    <div id="featured-container"><p class="loading">Loading featured members...</p></div>
+  </div>
+</AdminLayout>
+
+<style is:global>
+  .gov-tabs { display:flex; gap:0; margin-bottom:1.5rem; box-shadow:var(--shadow-recessed); border-radius:var(--radius-xl); overflow:hidden; }
+  .gov-tab { flex:1; padding:0.75rem 1rem; border:none; background:transparent; color:var(--color-on-surface-variant); font-family:var(--font-label); font-size:13px; font-weight:600; cursor:pointer; letter-spacing:0.03em; transition:all 0.15s; text-align:center; }
+  .gov-tab.active { box-shadow:var(--shadow-extruded-sm); color:var(--color-primary); }
+  .gov-tab:hover:not(.active) { color:var(--color-on-surface); }
+  .gov-panel { display:none; }
+  .gov-panel.active { display:block; }
+  .gov-toolbar { display:flex; gap:0.5rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap; }
+  .post-card { padding:1rem; margin-bottom:0.75rem; border-radius:var(--radius-md); box-shadow:var(--shadow-extruded-sm); display:flex; gap:1rem; align-items:flex-start; }
+  .post-card.pinned { border-left:3px solid var(--color-primary); }
+  .post-card.hidden { opacity:0.5; }
+  .post-avatar { width:40px; height:40px; border-radius:50%; background:var(--color-surface-container-highest); display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--color-primary-container); flex-shrink:0; }
+  .post-body { flex:1; min-width:0; }
+  .post-meta { display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; font-size:12px; color:var(--color-on-surface-variant); margin-bottom:0.25rem; }
+  .post-meta strong { color:var(--color-on-surface); }
+  .post-content { font-size:14px; color:var(--color-on-surface); line-height:1.5; margin-bottom:0.5rem; word-break:break-word; }
+  .post-actions { display:flex; gap:0.35rem; flex-wrap:wrap; margin-top:0.5rem; }
+  .topic-row { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; box-shadow:var(--shadow-extruded-sm); border-radius:var(--radius-md); margin-bottom:0.5rem; }
+  .featured-row { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; box-shadow:var(--shadow-extruded-sm); border-radius:var(--radius-md); margin-bottom:0.5rem; }
+  .topic-hashtag { font-weight:600; font-size:16px; color:var(--color-primary); min-width:100px; }
+  .topic-count { font-size:13px; color:var(--color-on-surface-variant); }
+  .featured-info { flex:1; }
+  .featured-info strong { color:var(--color-on-surface); font-size:14px; }
+  .featured-info small { color:var(--color-on-surface-variant); font-size:12px; }
+  .order-input { width:60px; }
+  .btn-neu-sm { padding:0.4rem 0.75rem; font-size:12px; }
+</style>
+
+<script>
+  import { createBrowserClient } from "@supabase/ssr";
+  function getSupabase() {
+    return createBrowserClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+    );
+  }
+  function escapeHtml(str) {
+    if (!str) return "";
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+  function errMsg(err) {
+    return err instanceof Error ? err.message : typeof err === "string" ? err : "Request failed. Check console for details.";
+  }
+
+  /* ── Tab switching ── */
+  document.querySelectorAll(".gov-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".gov-tab").forEach((t) => t.classList.remove("active"));
+      document.querySelectorAll(".gov-panel").forEach((p) => p.classList.remove("active"));
+      tab.classList.add("active");
+      document.getElementById("panel-" + tab.getAttribute("data-tab"))?.classList.add("active");
+    });
+  });
+
+  /* ── Posts ── */
+  let postsCache = [];
+  const supabase = getSupabase();
+
+  async function loadPosts() {
+    const container = document.getElementById("posts-container");
+    if (!container) return;
+    try {
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="empty-state">No posts found.</div>';
+        postsCache = [];
+        return;
+      }
+      postsCache = data;
+      renderPosts(data, "");
+    } catch (err) {
+      console.error("FeedGov loadPosts:", err);
+      container.innerHTML = `<div class="error-state">Failed to load: ${errMsg(err)}</div>`;
+    }
+  }
+
+  function renderPosts(posts, filter) {
+    const container = document.getElementById("posts-container");
+    if (!container) return;
+    const filtered = filter
+      ? posts.filter(
+          (p) =>
+            (p.content || "").toLowerCase().includes(filter.toLowerCase()) ||
+            (p.tags || []).some((t) => t.toLowerCase().includes(filter.toLowerCase()))
+        )
+      : posts;
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="empty-state">No matching posts.</div>';
+      return;
+    }
+    container.innerHTML = `
+      <div style="margin-bottom:0.5rem;font-size:12px;color:var(--color-on-surface-variant)">${filtered.length} post${filtered.length === 1 ? "" : "s"}</div>
+      ${filtered
+        .map(
+          (p) => `
+        <div class="post-card${p.is_pinned ? " pinned" : ""}${p.is_hidden ? " hidden" : ""}">
+          <div class="post-avatar"><span class="material-symbols-outlined">person</span></div>
+          <div class="post-body">
+            <div class="post-meta">
+              <strong>${escapeHtml(p.user_id?.slice(0, 8))}…</strong>
+              <span>${new Date(p.created_at).toLocaleDateString()} ${new Date(p.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+              ${p.is_pinned ? '<span class="status-badge"><span class="status-dot approved"></span><span class="status-label approved">Pinned</span></span>' : ""}
+              ${p.is_hidden ? '<span class="status-badge"><span class="status-dot pending"></span><span class="status-label pending">Hidden</span></span>' : ""}
+              ${p.image_url ? '<span class="material-symbols-outlined" style="font-size:14px;color:var(--color-primary-container)">image</span>' : ""}
+              ${p.file_url ? '<span class="material-symbols-outlined" style="font-size:14px;color:var(--color-primary-container)">attach_file</span>' : ""}
+            </div>
+            <div class="post-content">${escapeHtml(p.content || "(no content)").slice(0, 300)}</div>
+            ${(p.tags || []).length > 0 ? `<div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:0.35rem">${p.tags.map((t) => `<span class="campus-tag">${escapeHtml(t)}</span>`).join("")}</div>` : ""}
+            <div class="post-actions">
+              <button class="btn-neu btn-neu-sm ${p.is_pinned ? "danger" : ""}" data-action="toggle-pin" data-id="${p.id}" data-pinned="${p.is_pinned}">${p.is_pinned ? "Unpin" : "Pin"}</button>
+              <button class="btn-neu btn-neu-sm ${p.is_hidden ? "" : "danger"}" data-action="toggle-hide" data-id="${p.id}" data-hidden="${p.is_hidden}">${p.is_hidden ? "Show" : "Hide"}</button>
+              <button class="btn-neu btn-neu-sm danger" data-action="delete" data-id="${p.id}">Delete</button>
+            </div>
+          </div>
+        </div>
+      `
+        )
+        .join("")}
+    `;
+    container.querySelectorAll("[data-action]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const action = btn.getAttribute("data-action");
+        const id = btn.getAttribute("data-id");
+        btn.disabled = true;
+        try {
+          if (action === "toggle-pin") {
+            const pinned = btn.getAttribute("data-pinned") === "true";
+            await supabase.from("posts").update({ is_pinned: !pinned }).eq("id", id);
+          } else if (action === "toggle-hide") {
+            const hidden = btn.getAttribute("data-hidden") === "true";
+            await supabase.from("posts").update({ is_hidden: !hidden }).eq("id", id);
+          } else if (action === "delete") {
+            if (!confirm("Delete this post permanently?")) { btn.disabled = false; return; }
+            await supabase.from("posts").delete().eq("id", id);
+          }
+          loadPosts();
+        } catch (err) {
+          console.error("FeedGov toggle action:", err);
+          btn.disabled = false;
+          alert("Action failed: " + errMsg(err));
+        }
+      });
+    });
+  }
+
+  document.getElementById("post-search")?.addEventListener("input", (e) => {
+    renderPosts(postsCache, e.target.value);
+  });
+
+  document.getElementById("refresh-posts")?.addEventListener("click", loadPosts);
+
+  /* ── Trending Topics ── */
+  async function loadTopics() {
+    const container = document.getElementById("topics-container");
+    if (!container) return;
+    try {
+      const { data, error } = await supabase
+        .from("trending_topics")
+        .select("*")
+        .order("display_order")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="empty-state">No trending topics defined.</div>';
+        return;
+      }
+      container.innerHTML = `
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Order</th><th>Hashtag</th><th>Display Count</th><th>Active</th><th>Action</th></tr></thead>
+            <tbody>
+              ${data
+                .map(
+                  (t) => `
+                <tr>
+                  <td><input class="order-input name-input" type="number" data-id="${t.id}" value="${t.display_order}" style="width:60px" /></td>
+                  <td><strong>${escapeHtml(t.hashtag)}</strong></td>
+                  <td>${escapeHtml(t.display_count || "—")}</td>
+                  <td><span class="status-badge"><span class="status-dot ${t.is_active ? "approved" : "pending"}"></span><span class="status-label ${t.is_active ? "approved" : "pending"}">${t.is_active ? "Active" : "Inactive"}</span></span></td>
+                  <td>
+                    <div style="display:flex;gap:0.35rem">
+                      <button class="btn-neu btn-neu-sm" data-action="toggle-topic" data-id="${t.id}" data-active="${t.is_active}">${t.is_active ? "Deactivate" : "Activate"}</button>
+                      <button class="btn-neu btn-neu-sm danger" data-action="delete-topic" data-id="${t.id}">Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              `
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+      container.querySelectorAll("[data-action]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const action = btn.getAttribute("data-action");
+          const id = btn.getAttribute("data-id");
+          btn.disabled = true;
+          try {
+            if (action === "toggle-topic") {
+              const active = btn.getAttribute("data-active") === "true";
+              await supabase.from("trending_topics").update({ is_active: !active }).eq("id", id);
+            } else if (action === "delete-topic") {
+              if (!confirm("Delete this trending topic?")) { btn.disabled = false; return; }
+              await supabase.from("trending_topics").delete().eq("id", id);
+            }
+            loadTopics();
+          } catch (err) {
+            console.error("FeedGov topic action:", err);
+            btn.disabled = false;
+            alert("Failed: " + errMsg(err));
+          }
+        });
+      });
+      container.querySelectorAll(".order-input").forEach((inp) => {
+        inp.addEventListener("change", async () => {
+          const id = inp.getAttribute("data-id");
+          const val = parseInt(inp.value) || 0;
+          await supabase.from("trending_topics").update({ display_order: val }).eq("id", id);
+        });
+      });
+    } catch (err) {
+      console.error("FeedGov loadTopics:", err);
+      container.innerHTML = `<div class="error-state">Failed to load: ${errMsg(err)}</div>`;
+    }
+  }
+
+  document.getElementById("add-topic-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const hashtagInput = document.getElementById("topic-hashtag");
+    const countInput = document.getElementById("topic-count");
+    const errorEl = document.getElementById("topic-error");
+    if (!hashtagInput || !errorEl) return;
+    errorEl.textContent = "";
+    const hashtag = hashtagInput.value.trim();
+    if (!hashtag) return;
+    hashtagInput.disabled = true;
+    try {
+      const { error } = await supabase.from("trending_topics").insert({
+        hashtag,
+        display_count: countInput?.value?.trim() || "",
+      });
+      if (error) throw error;
+      hashtagInput.value = "";
+      if (countInput) countInput.value = "";
+      loadTopics();
+    } catch (err) {
+      console.error("FeedGov addTopic:", err);
+      errorEl.textContent = errMsg(err);
+    } finally {
+      hashtagInput.disabled = false;
+      hashtagInput.focus();
+    }
+  });
+
+  /* ── Featured Members ── */
+  async function loadFeatured() {
+    const container = document.getElementById("featured-container");
+    if (!container) return;
+    try {
+      const { data, error } = await supabase
+        .from("featured_members")
+        .select("*, profiles!inner(username, display_name)")
+        .order("display_order")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="empty-state">No featured members.</div>';
+        return;
+      }
+      container.innerHTML = `
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Order</th><th>User</th><th>Active</th><th>Action</th></tr></thead>
+            <tbody>
+              ${data
+                .map(
+                  (m) => `
+                <tr>
+                  <td><input class="order-input name-input" type="number" data-id="${m.id}" value="${m.display_order}" style="width:60px" /></td>
+                  <td><strong>${escapeHtml(m.profiles?.display_name || m.profiles?.username || m.user_id.slice(0, 8))}</strong> <small style="color:var(--color-on-surface-variant)">${escapeHtml(m.user_id.slice(0, 8))}…</small></td>
+                  <td><span class="status-badge"><span class="status-dot ${m.is_active ? "approved" : "pending"}"></span><span class="status-label ${m.is_active ? "approved" : "pending"}">${m.is_active ? "Active" : "Inactive"}</span></span></td>
+                  <td>
+                    <div style="display:flex;gap:0.35rem">
+                      <button class="btn-neu btn-neu-sm" data-action="toggle-featured" data-id="${m.id}" data-active="${m.is_active}">${m.is_active ? "Deactivate" : "Activate"}</button>
+                      <button class="btn-neu btn-neu-sm danger" data-action="delete-featured" data-id="${m.id}">Remove</button>
+                    </div>
+                  </td>
+                </tr>
+              `
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+      container.querySelectorAll("[data-action]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const action = btn.getAttribute("data-action");
+          const id = btn.getAttribute("data-id");
+          btn.disabled = true;
+          try {
+            if (action === "toggle-featured") {
+              const active = btn.getAttribute("data-active") === "true";
+              await supabase.from("featured_members").update({ is_active: !active }).eq("id", id);
+            } else if (action === "delete-featured") {
+              if (!confirm("Remove this member from featured?")) { btn.disabled = false; return; }
+              await supabase.from("featured_members").delete().eq("id", id);
+            }
+            loadFeatured();
+          } catch (err) {
+            console.error("FeedGov featured action:", err);
+            btn.disabled = false;
+            alert("Failed: " + errMsg(err));
+          }
+        });
+      });
+      container.querySelectorAll(".order-input").forEach((inp) => {
+        inp.addEventListener("change", async () => {
+          const id = inp.getAttribute("data-id");
+          const val = parseInt(inp.value) || 0;
+          await supabase.from("featured_members").update({ display_order: val }).eq("id", id);
+        });
+      });
+    } catch (err) {
+      console.error("FeedGov loadFeatured:", err);
+      container.innerHTML = `<div class="error-state">Failed to load: ${errMsg(err)}</div>`;
+    }
+  }
+
+  document.getElementById("add-featured-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = document.getElementById("featured-user-id");
+    const errorEl = document.getElementById("featured-error");
+    if (!input || !errorEl) return;
+    errorEl.textContent = "";
+    const uid = input.value.trim();
+    if (!uid) return;
+    input.disabled = true;
+    try {
+      const { error } = await supabase.from("featured_members").insert({ user_id: uid });
+      if (error) throw error;
+      input.value = "";
+      loadFeatured();
+    } catch (err) {
+      console.error("FeedGov addFeatured:", err);
+      errorEl.textContent = errMsg(err);
+    } finally {
+      input.disabled = false;
+      input.focus();
+    }
+  });
+
+  loadPosts();
+  loadTopics();
+  loadFeatured();
+</script>
