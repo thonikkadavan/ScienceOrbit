@@ -1,48 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { createClient } from "../lib/supabase";
-
-const loginPrefill = Astro.url.searchParams.get("login") ?? Astro.url.searchParams.get("email");
-
-if (Astro.request.method === "POST") {
-  const formData = await Astro.request.formData();
-  const login = formData.get("login")?.toString() ?? "";
-  const password = formData.get("password")?.toString() ?? "";
-
-  const supabase = createClient({ request: Astro.request, cookies: Astro.cookies });
-
-  let email = login;
-  if (!login.includes("@")) {
-    const { data: emailResult } = await supabase.rpc("lookup_username_email", { p_username: login });
-
-    if (!emailResult) {
-      return Astro.redirect(`/login?error=${encodeURIComponent("Invalid username or password")}&login=${encodeURIComponent(login)}`);
-    }
-    email = emailResult;
-  }
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    return Astro.redirect(`/login?error=${encodeURIComponent(error.message)}&login=${encodeURIComponent(login)}`);
-  }
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
-    if (profile?.is_admin) {
-      return Astro.redirect("/admin");
-    }
-  }
-
-  return Astro.redirect("/dashboard/feed");
-}
-
 const errorParam = Astro.url.searchParams.get("error");
+const loginPrefill = Astro.url.searchParams.get("login") ?? Astro.url.searchParams.get("email");
 ---
 
 <BaseLayout title="Login">
@@ -51,7 +10,7 @@ const errorParam = Astro.url.searchParams.get("error");
       <div class="auth-card-inner">
         <h1>Welcome Back</h1>
         <p class="auth-subtitle">Sign in to Science Orbit</p>
-        <form method="POST" class="auth-form">
+        <form id="login-form" class="auth-form">
           <div class="form-group">
             <label for="login">Email or Username</label>
             <input type="text" id="login" name="login" required placeholder="you@example.com or username" value={loginPrefill ?? ""} />
@@ -60,8 +19,8 @@ const errorParam = Astro.url.searchParams.get("error");
             <label for="password">Password</label>
             <input type="password" id="password" name="password" required placeholder="Your password" />
           </div>
-          {errorParam && <p class="error-msg">{errorParam}</p>}
-          <button type="submit" class="btn-primary">Sign In</button>
+          <p id="error-msg" class="error-msg">{errorParam}</p>
+          <button type="submit" class="btn-primary" id="submit-btn">Sign In</button>
         </form>
         <p class="auth-footer">
           Don't have an account? <a href="/register">Register here</a>
@@ -70,6 +29,58 @@ const errorParam = Astro.url.searchParams.get("error");
     </div>
   </div>
 </BaseLayout>
+
+<script>
+  import { createBrowserClient } from "@supabase/ssr";
+  const form = document.getElementById("login-form");
+  const errorMsg = document.getElementById("error-msg");
+  const submitBtn = document.getElementById("submit-btn");
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (errorMsg) errorMsg.textContent = "";
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Signing in..."; }
+
+    const login = document.getElementById("login").value.trim();
+    const password = document.getElementById("password").value;
+
+    try {
+      const supabase = createBrowserClient(
+        import.meta.env.PUBLIC_SUPABASE_URL,
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+      );
+
+      let email = login;
+      if (!login.includes("@")) {
+        const { data: emailResult, error: rpcErr } = await supabase.rpc("lookup_username_email", { p_username: login });
+        if (rpcErr) throw rpcErr;
+        if (!emailResult) throw new Error("Invalid username or password");
+        email = emailResult;
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("is_admin")
+          .eq("id", user.id)
+          .single();
+        if (profile?.is_admin) {
+          window.location.href = "/admin";
+          return;
+        }
+      }
+
+      window.location.href = "/dashboard/feed";
+    } catch (err) {
+      if (errorMsg) errorMsg.textContent = err.message || "Sign in failed.";
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Sign In"; }
+    }
+  });
+</script>
 
 <style is:global>
   .auth-page {
