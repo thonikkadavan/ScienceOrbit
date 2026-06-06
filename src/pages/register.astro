@@ -25,6 +25,20 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             <input type="email" id="email" required placeholder="you@example.com" />
           </div>
           <div class="form-group">
+            <label for="father-name">Father's Name</label>
+            <input type="text" id="father-name" required placeholder="Enter your father's name" />
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone No</label>
+            <input type="tel" id="phone" required placeholder="Enter your phone number" pattern="[0-9+\-\s]+" title="Phone number (digits, +, -, spaces only)" />
+          </div>
+          <div class="form-group">
+            <label for="dasthar">Photo (Dasthar)</label>
+            <input type="file" id="dasthar" accept="image/jpeg,image/png,image/webp" required />
+            <div id="dasthar-preview" class="dasthar-preview"></div>
+            <small style="color:var(--color-on-surface-variant);font-size:0.75rem">JPEG, PNG, or WebP. Max 5MB. Passport-style photo recommended.</small>
+          </div>
+          <div class="form-group">
             <label for="password">Password</label>
             <input
               type="password"
@@ -49,6 +63,25 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
 <script>
   import { createBrowserClient } from "@supabase/ssr";
+
+  // Dasthar photo preview
+  const dastharInput = document.getElementById("dasthar");
+  const dastharPreview = document.getElementById("dasthar-preview");
+  dastharInput?.addEventListener("change", () => {
+    const file = dastharInput.files?.[0];
+    if (!file) { dastharPreview.innerHTML = ""; return; }
+    if (file.size > 5 * 1024 * 1024) {
+      dastharPreview.innerHTML = '<span style="color:var(--color-error);font-size:0.8rem">File too large. Max 5MB.</span>';
+      dastharInput.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      dastharPreview.innerHTML = `<img src="${e.target.result}" class="dasthar-preview-img" />`;
+    };
+    reader.readAsDataURL(file);
+  });
+
   const form = document.getElementById("register-form");
   const errorMsg = document.getElementById("error-msg");
   const submitBtn = document.getElementById("submit-btn");
@@ -62,6 +95,16 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     const username = document.getElementById("username").value.trim();
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
+    const fatherName = document.getElementById("father-name").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const dastharFile = dastharInput?.files?.[0];
+
+    if (dastharFile && dastharFile.size > 5 * 1024 * 1024) {
+      errorMsg.textContent = "Photo exceeds 5MB limit.";
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Create Account";
+      return;
+    }
 
     try {
       const supabase = createBrowserClient(
@@ -69,7 +112,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         import.meta.env.PUBLIC_SUPABASE_ANON_KEY
       );
 
-      const { error } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -77,7 +120,36 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         },
       });
 
-      if (error) throw error;
+      if (signUpError) throw signUpError;
+
+      const userId = signUpData?.user?.id;
+      if (!userId) throw new Error("Sign-up succeeded but no user ID returned.");
+
+      // Upload dasthar photo
+      let dastharUrl = "";
+      if (dastharFile) {
+        const ext = dastharFile.name.split(".").pop() || "jpg";
+        const filePath = `${userId}/dasthar.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from("dasthar")
+          .upload(filePath, dastharFile, { upsert: true, contentType: dastharFile.type });
+        if (uploadErr) throw uploadErr;
+        dastharUrl = filePath;
+      }
+
+      // Update profile with extra fields
+      const { error: updateErr } = await supabase
+        .from("profiles")
+        .update({
+          father_name: fatherName,
+          phone,
+          dasthar_url: dastharUrl,
+        })
+        .eq("id", userId);
+
+      if (updateErr) {
+        console.error("Register profile update:", updateErr);
+      }
 
       window.location.href = "/login?registered=true";
     } catch (err) {
@@ -200,5 +272,15 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     text-align: center;
     font-size: 0.875rem;
     color: var(--color-on-surface-variant);
+  }
+  .dasthar-preview {
+    margin-top: 0.5rem;
+  }
+  .dasthar-preview-img {
+    width: 100px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: var(--radius-default);
+    box-shadow: var(--shadow-extruded-sm);
   }
 </style>

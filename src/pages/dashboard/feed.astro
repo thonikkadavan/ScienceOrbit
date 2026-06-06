@@ -8,10 +8,6 @@ const supabase = createClient({ request: Astro.request, cookies: Astro.cookies }
 const sessionUser = await getSessionUser(supabase);
 const profile = await getProfile(supabase);
 
-if (!profile) {
-  return Astro.redirect("/login");
-}
-
 const avatarUrl = profile.avatar_url
   ? supabase.storage.from("avatars").getPublicUrl(profile.avatar_url).data.publicUrl
   : null;
@@ -20,11 +16,11 @@ const { data: newUsers } = await supabase
   .from("profiles")
   .select("id, username, display_name, avatar_url, legal_name")
   .order("created_at", { ascending: false })
-  .limit(5);
+  .limit(3);
 
 const { data: posts } = await supabase
   .from("posts")
-  .select("id, user_id, content, created_at, image_url, file_url, file_name")
+  .select("id, user_id, content, title, created_at, image_url, file_url, file_name")
   .order("created_at", { ascending: false })
   .limit(50);
 
@@ -35,6 +31,12 @@ const { data: authors } = authorIds.length
   : { data: [] };
 const authorMap = new Map((authors || []).map((a) => [a.id, a]));
 const postsWithAuthors = (posts || []).map((p) => ({ ...p, author: authorMap.get(p.user_id) || null }));
+
+// Shuffle posts so each refresh shows different order
+for (let i = postsWithAuthors.length - 1; i > 0; i--) {
+  const j = Math.floor(Math.random() * (i + 1));
+  [postsWithAuthors[i], postsWithAuthors[j]] = [postsWithAuthors[j], postsWithAuthors[i]];
+}
 
 // Batch-load like counts and liked status for posts
 const postIds = (posts || []).map((p) => p.id);
@@ -69,15 +71,24 @@ function getTimeAgo(dateStr: string | null): string {
 ---
 
 <BaseLayout title="Academic Feed">
-  <DashboardSidebar current="feed" />
+  {profile ? <DashboardSidebar current="feed" /> : null}
   <div class="feed-root">
     <main class="feed-main">
       <div class="feed-content">
+        {!profile ? (
+          <div class="guest-banner">
+            <span class="material-symbols-outlined guest-banner-icon">visibility</span>
+            <span>You're browsing as a guest. <a href="/login" class="guest-banner-link">Sign in</a> or <a href="/register" class="guest-banner-link">Register</a> to join the conversation.</span>
+          </div>
+        ) : null}
         <div class="top-search-wrap">
           <span class="material-symbols-outlined top-search-icon">search</span>
           <input class="top-search-input" type="text" id="top-search" placeholder="Search scholars and posts..." autocomplete="off" />
           <button class="top-search-clear" id="top-search-clear" aria-label="Clear">
             <span class="material-symbols-outlined">close</span>
+          </button>
+          <button class="feed-refresh-btn" id="feed-refresh" aria-label="Refresh feed">
+            <span class="material-symbols-outlined">refresh</span>
           </button>
           <div class="top-search-dropdown" id="top-search-dropdown"></div>
         </div>
@@ -105,6 +116,7 @@ function getTimeAgo(dateStr: string | null): string {
           </div>
         </div>
 
+        {profile ? (
         <div class="feed-composer-overlay" id="composer-overlay">
           <div class="feed-composer-modal">
             <div class="composer-modal-header">
@@ -124,6 +136,7 @@ function getTimeAgo(dateStr: string | null): string {
                 )}
               </div>
               <div class="composer-input-area">
+                <input class="composer-input composer-title-input" type="text" id="composer-title" placeholder="Post title..." />
                 <textarea class="composer-input composer-textarea" placeholder="Share your latest findings..." rows="4"></textarea>
                 <div class="composer-preview" id="composer-preview" style="display:none"></div>
               </div>
@@ -141,6 +154,7 @@ function getTimeAgo(dateStr: string | null): string {
             </div>
           </div>
         </div>
+        ) : null}
 
         <div class="profile-overlay" id="profile-overlay">
           <div class="profile-modal">
@@ -154,9 +168,11 @@ function getTimeAgo(dateStr: string | null): string {
           </div>
         </div>
 
+        {profile ? (
         <button class="feed-fab" id="fab-add" aria-label="Create post">
           <span class="material-symbols-outlined">add</span>
         </button>
+        ) : null}
 
         <div class="feed-posts" id="feed-posts">
           {postsWithAuthors.length === 0 && (
@@ -171,7 +187,7 @@ function getTimeAgo(dateStr: string | null): string {
             return (
             <article class="feed-post" data-post-id={post.id}>
               <div class="post-header">
-                <div class="post-author">
+                <a href={`/dashboard?user=${post.user_id}`} class="post-author">
                   <div class="post-avatar">
                     {authorAvatar ? (
                       <img src={authorAvatar} alt="" class="post-avatar-img" />
@@ -183,15 +199,17 @@ function getTimeAgo(dateStr: string | null): string {
                     <strong class="post-author-name">{author?.display_name || author?.username || "Unknown"}</strong>
                     <span class="post-author-meta">{timeAgo}</span>
                   </div>
-                </div>
-                {post.user_id === profile.id && (
+                </a>
+                {profile && post.user_id === profile.id && (
                   <button class="post-menu-btn post-delete-btn" data-post-id={post.id} aria-label="Delete post">
                     <span class="material-symbols-outlined">delete</span>
                   </button>
                 )}
               </div>
               <div class="post-body">
+                {post.title ? <h4 class="post-title">{post.title}</h4> : null}
                 {post.content ? <p class="post-text">{post.content}</p> : null}
+                {post.content ? <button class="post-seemore" style="display:none">See more</button> : null}
                 {post.image_url ? <img src={post.image_url} class="post-image" alt="" loading="lazy" /> : null}
                 {post.file_url ? <a href={post.file_url} target="_blank" class="post-attach-link"><span class="material-symbols-outlined">description</span> {post.file_name || "Attachment"}</a> : null}
               </div>
@@ -199,6 +217,9 @@ function getTimeAgo(dateStr: string | null): string {
                 <button class="post-action-btn post-like-btn" data-post-id={post.id} data-liked={likedPosts.has(post.id) ? "true" : "false"}>
                   <span class="material-symbols-outlined post-like-icon">{likedPosts.has(post.id) ? "favorite" : "favorite_border"}</span>
                   <span class="post-like-count">{likeCountMap.get(post.id) || 0}</span>
+                </button>
+                <button class="post-action-btn post-share-btn" data-post-url={`${Astro.url.origin}/dashboard?user=${post.user_id}`} aria-label="Share post">
+                  <span class="material-symbols-outlined">share</span>
                 </button>
               </div>
             </article>
@@ -283,7 +304,10 @@ function getTimeAgo(dateStr: string | null): string {
     import.meta.env.PUBLIC_SUPABASE_ANON_KEY
   );
 
-  // Composer modal
+  // Guest check - if no composer elements, we're viewing as guest
+  const isGuest = !document.getElementById("fab-add");
+
+  // Composer modal (auth only)
   const fab = document.getElementById("fab-add");
   const overlay = document.getElementById("composer-overlay");
   const closeBtn = document.getElementById("composer-close");
@@ -292,6 +316,48 @@ function getTimeAgo(dateStr: string | null): string {
   closeBtn?.addEventListener("click", () => overlay?.classList.remove("open"));
   overlay?.addEventListener("click", (e) => {
     if (e.target === overlay) overlay.classList.remove("open");
+  });
+
+  // Handle image load errors - replace broken images with an icon
+  document.querySelectorAll(".post-image, .pp-post-image").forEach((img) => {
+    img.addEventListener("error", () => {
+      img.style.display = "none";
+      const fallback = document.createElement("div");
+      fallback.className = "post-image-fallback";
+      fallback.innerHTML = '<span class="material-symbols-outlined" style="font-size:2rem;color:var(--color-outline)">broken_image</span>';
+      img.parentElement?.insertBefore(fallback, img.nextSibling);
+    });
+  });
+
+  // "See more" toggle for post content
+  // Share button - copy post URL
+  document.addEventListener("click", async (e) => {
+    const shareBtn = e.target.closest(".post-share-btn");
+    if (shareBtn) {
+      const url = shareBtn.dataset.postUrl;
+      if (navigator.share) {
+        await navigator.share({ title: "Science Orbit", url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        const original = shareBtn.innerHTML;
+        shareBtn.innerHTML = '<span class="material-symbols-outlined">check</span>';
+        setTimeout(() => { shareBtn.innerHTML = original; }, 2000);
+      }
+      return;
+    }
+    const btn = e.target.closest(".post-seemore");
+    if (!btn) return;
+    const text = btn.parentElement.querySelector(".post-text");
+    if (!text) return;
+    text.classList.toggle("expanded");
+    btn.textContent = text.classList.contains("expanded") ? "Show less" : "See more";
+  });
+  // Show "See more" only on posts where content overflows
+  document.querySelectorAll(".post-text").forEach((el) => {
+    if (el.scrollHeight > el.clientHeight) {
+      const btn = el.parentElement.querySelector(".post-seemore");
+      if (btn) btn.style.display = "";
+    }
   });
 
   // Profile viewer modal
@@ -467,9 +533,12 @@ function getTimeAgo(dateStr: string | null): string {
     document.getElementById("preview-remove-file")?.addEventListener("click", () => { pendingFileUrl = ""; pendingFileName = ""; composerPreview.style.display = "none"; composerPreview.innerHTML = ""; fileInput.value = ""; });
   });
 
+  const composerTitle = document.getElementById("composer-title");
+
   postBtn?.addEventListener("click", async () => {
+    const title = composerTitle?.value?.trim() || "";
     const content = composerTextarea?.value?.trim();
-    if (!content && !pendingImageUrl && !pendingFileUrl) return;
+    if (!content && !pendingImageUrl && !pendingFileUrl && !title) return;
     postBtn.disabled = true;
     postBtn.textContent = "Posting...";
     const { data: { user } } = await supabase.auth.getUser();
@@ -477,13 +546,14 @@ function getTimeAgo(dateStr: string | null): string {
     const { data, error } = await supabase
       .from("posts")
       .insert({
+        title: title,
         content: content || "",
         user_id: user.id,
         image_url: pendingImageUrl,
         file_url: pendingFileUrl,
         file_name: pendingFileName,
       })
-      .select("id, user_id, content, created_at, image_url, file_url, file_name")
+      .select("id, user_id, content, title, created_at, image_url, file_url, file_name")
       .single();
     if (error) { console.error(error); postBtn.disabled = false; postBtn.textContent = "Post"; return; }
     // Prepend to feed
@@ -495,6 +565,7 @@ function getTimeAgo(dateStr: string | null): string {
     const av = author?.avatar_url ? supabase.storage.from("avatars").getPublicUrl(author.avatar_url).data.publicUrl : null;
     const mediaHtml = data.image_url ? `<img src="${data.image_url}" class="post-image" alt="" loading="lazy" />` : "";
     const fileHtml = data.file_url ? `<a href="${data.file_url}" target="_blank" class="post-attach-link"><span class="material-symbols-outlined">description</span> ${data.file_name || "Attachment"}</a>` : "";
+    const titleHtml = data.title ? `<h4 class="post-title">${data.title.replace(/</g, "&lt;")}</h4>` : "";
     const article = document.createElement("article");
     article.className = "feed-post";
     article.innerHTML = `
@@ -509,6 +580,7 @@ function getTimeAgo(dateStr: string | null): string {
         <button class="post-menu-btn post-delete-btn" data-post-id="${data.id}" aria-label="Delete post"><span class="material-symbols-outlined">delete</span></button>
       </div>
       <div class="post-body">
+        ${titleHtml}
         ${data.content ? `<p class="post-text">${data.content.replace(/</g, "&lt;")}</p>` : ""}
         ${mediaHtml}
         ${fileHtml}
@@ -525,6 +597,7 @@ function getTimeAgo(dateStr: string | null): string {
     // Remove empty state if present
     const empty = feedPosts?.querySelector(".feed-empty");
     if (empty) empty.remove();
+    composerTitle.value = "";
     composerTextarea.value = "";
     pendingImageUrl = "";
     pendingFileUrl = "";
@@ -557,34 +630,49 @@ function getTimeAgo(dateStr: string | null): string {
     btn.addEventListener("click", deletePost);
   });
 
-  // Like / unlike (event delegation)
-  document.getElementById("feed-posts")?.addEventListener("click", async (e) => {
-    const btn = e.target.closest(".post-like-btn");
-    if (!btn) return;
-    const postId = btn.dataset.postId;
-    const liked = btn.dataset.liked === "true";
-    const icon = btn.querySelector(".post-like-icon");
-    const countEl = btn.querySelector(".post-like-count");
-    const supabase = createBrowserClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY
-    );
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    if (liked) {
-      const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", user.id);
-      if (error) { console.error(error); return; }
-      btn.dataset.liked = "false";
-      if (icon) icon.textContent = "favorite_border";
-      if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
-    } else {
-      const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: user.id });
-      if (error) { console.error(error); return; }
-      btn.dataset.liked = "true";
-      if (icon) icon.textContent = "favorite";
-      if (countEl) countEl.textContent = parseInt(countEl.textContent) + 1;
-    }
+  // Manual refresh - reloads feed data without full page refresh
+  const refreshBtn = document.getElementById("feed-refresh");
+  const feedPostsContainer = document.getElementById("feed-posts");
+
+  refreshBtn?.addEventListener("click", async () => {
+    refreshBtn.classList.add("spinning");
+    window.location.reload();
   });
+
+  // Store current user ID for delete checks
+  let currentUserId = null;
+  supabase.auth.getUser().then(({ data }) => { currentUserId = data?.user?.id; });
+
+  // Like / unlike (event delegation, auth only)
+  if (!isGuest) {
+    document.getElementById("feed-posts")?.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".post-like-btn");
+      if (!btn) return;
+      const postId = btn.dataset.postId;
+      const liked = btn.dataset.liked === "true";
+      const icon = btn.querySelector(".post-like-icon");
+      const countEl = btn.querySelector(".post-like-count");
+      const supabase = createBrowserClient(
+        import.meta.env.PUBLIC_SUPABASE_URL,
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+      );
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      if (liked) {
+        const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", user.id);
+        if (error) { console.error(error); return; }
+        btn.dataset.liked = "false";
+        if (icon) icon.textContent = "favorite_border";
+        if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
+      } else {
+        const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: user.id });
+        if (error) { console.error(error); return; }
+        btn.dataset.liked = "true";
+        if (icon) icon.textContent = "favorite";
+        if (countEl) countEl.textContent = parseInt(countEl.textContent) + 1;
+      }
+    });
+  }
 </script>
 
 <style is:global>
@@ -657,8 +745,8 @@ function getTimeAgo(dateStr: string | null): string {
     display: flex;
     gap: 1.5rem;
     padding: 2rem;
-    max-width: 1280px;
     transition: margin-left 0.2s ease;
+    justify-content: center;
   }
 
   body:has(.ds-sidebar:hover) .feed-main {
@@ -667,10 +755,37 @@ function getTimeAgo(dateStr: string | null): string {
 
   .feed-content {
     flex: 1;
-    max-width: 680px;
+    max-width: 720px;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+  }
+
+  /* Guest banner */
+  .guest-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    background: var(--color-surface-container-high);
+    color: var(--color-on-surface-variant);
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow-extruded-sm);
+  }
+  .guest-banner-icon {
+    font-size: 1.25rem;
+    color: var(--color-primary);
+  }
+  .guest-banner-link {
+    color: var(--color-primary);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .guest-banner-link:hover {
+    text-decoration: underline;
   }
 
   /* FAB */
@@ -832,15 +947,14 @@ function getTimeAgo(dateStr: string | null): string {
   }
 
   .post-image {
-    max-width: 100%;
-    max-height: 400px;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
     border-radius: 8px;
     margin-top: 0.5rem;
-    object-fit: contain;
     background: linear-gradient(90deg, var(--color-surface-container-high) 25%, var(--color-surface-container-highest) 50%, var(--color-surface-container-high) 75%);
     background-size: 200% 100%;
     animation: skeleton-shimmer 1.5s ease-in-out infinite;
-    min-height: 60px;
   }
 
   @keyframes skeleton-shimmer {
@@ -849,9 +963,18 @@ function getTimeAgo(dateStr: string | null): string {
   }
 
   .post-image[src] {
-    background: var(--color-surface-container-high);
+    background: none;
     animation: none;
-    min-height: auto;
+  }
+  .post-image-fallback {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface-container-high);
+    border-radius: 8px;
+    margin-top: 0.5rem;
   }
 
   .post-attach-link {
@@ -907,6 +1030,9 @@ function getTimeAgo(dateStr: string | null): string {
 
   .post-like-btn[data-liked="true"] {
     color: #e11d48;
+  }
+  .post-like-btn[data-liked="true"] .post-like-icon {
+    font-variation-settings: "FILL" 1;
   }
 
   @media (max-width: 1024px) {
@@ -968,6 +1094,18 @@ function getTimeAgo(dateStr: string | null): string {
 
   .composer-input::placeholder {
     color: var(--color-outline);
+  }
+
+  .composer-title-input {
+    font-size: 16px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-outline-variant);
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  .composer-title-input::placeholder {
+    color: var(--color-outline);
+    font-weight: 400;
   }
 
   .composer-actions {
@@ -1062,6 +1200,15 @@ function getTimeAgo(dateStr: string | null): string {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 8px;
+    padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+    margin: -0.25rem;
+    transition: background 0.15s;
+  }
+  .post-author:hover {
+    background: var(--color-surface-container-high);
   }
 
   .post-avatar {
@@ -1147,6 +1294,26 @@ function getTimeAgo(dateStr: string | null): string {
     font-size: 14px;
     line-height: 1.6;
     color: var(--color-on-surface-variant);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .post-text.expanded {
+    -webkit-line-clamp: unset;
+  }
+  .post-seemore {
+    background: none;
+    border: none;
+    color: #006a67;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 2px 0;
+    font-family: "Inter", sans-serif;
+  }
+  .post-seemore:hover {
+    text-decoration: underline;
   }
 
   .post-tags {
@@ -1442,6 +1609,33 @@ function getTimeAgo(dateStr: string | null): string {
 
   .top-search-clear .material-symbols-outlined {
     font-size: 14px;
+  }
+
+  .feed-refresh-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: var(--color-surface);
+    color: var(--color-outline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-extruded-sm);
+    transition: all 0.15s;
+  }
+  .feed-refresh-btn:hover {
+    color: var(--color-primary);
+    box-shadow: var(--shadow-extruded-hover);
+  }
+  .feed-refresh-btn.spinning .material-symbols-outlined {
+    animation: feed-spin 0.6s linear infinite;
+  }
+  @keyframes feed-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 
   .top-search-dropdown {

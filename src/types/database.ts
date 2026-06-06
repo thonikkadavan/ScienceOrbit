@@ -33,8 +33,10 @@ export type Database = {
           avatar_url: string | null
           campus_id: string | null
           created_at: string | null
+          dasthar_url: string
           display_name: string
           deploy_url: string
+          father_name: string
           github_handle: string
           id: string
           is_admin: boolean | null
@@ -44,10 +46,12 @@ export type Database = {
           mentor_id: string | null
           mentor_name: string
           milestones: Json
+          phone: string
           project_description: string
           project_progress: number
           project_title: string
           repo_url: string
+          so_id: string | null
           social_links: Json
           subjects: string[] | null
           tech_stack: string[]
@@ -58,8 +62,10 @@ export type Database = {
           avatar_url?: string | null
           campus_id?: string | null
           created_at?: string | null
+          dasthar_url?: string
           display_name?: string
           deploy_url?: string
+          father_name?: string
           github_handle?: string
           id: string
           is_admin?: boolean | null
@@ -69,10 +75,12 @@ export type Database = {
           mentor_id?: string | null
           mentor_name?: string
           milestones?: Json
+          phone?: string
           project_description?: string
           project_progress?: number
           project_title?: string
           repo_url?: string
+          so_id?: string | null
           social_links?: Json
           subjects?: string[] | null
           tech_stack?: string[]
@@ -83,8 +91,10 @@ export type Database = {
           avatar_url?: string | null
           campus_id?: string | null
           created_at?: string | null
+          dasthar_url?: string
           display_name?: string
           deploy_url?: string
+          father_name?: string
           github_handle?: string
           id?: string
           is_admin?: boolean | null
@@ -94,59 +104,13 @@ export type Database = {
           mentor_id?: string | null
           mentor_name?: string
           milestones?: Json
+          phone?: string
           project_description?: string
           project_progress?: number
           project_title?: string
           repo_url?: string
+          so_id?: string | null
           social_links?: Json
-          subjects?: string[] | null
-          tech_stack?: string[]
-          username?: string
-        }
-        Insert: {
-          achievements?: string | null
-          avatar_url?: string | null
-          campus_id?: string | null
-          created_at?: string | null
-          display_name?: string
-          deploy_url?: string
-          github_handle?: string
-          id: string
-          is_admin?: boolean | null
-          is_approved?: boolean | null
-          legal_name?: string
-          linkedin_url?: string
-          mentor_id?: string | null
-          mentor_name?: string
-          milestones?: Json
-          project_description?: string
-          project_progress?: number
-          project_title?: string
-          repo_url?: string
-          subjects?: string[] | null
-          tech_stack?: string[]
-          username: string
-        }
-        Update: {
-          achievements?: string | null
-          avatar_url?: string | null
-          campus_id?: string | null
-          created_at?: string | null
-          display_name?: string
-          deploy_url?: string
-          github_handle?: string
-          id?: string
-          is_admin?: boolean | null
-          is_approved?: boolean | null
-          legal_name?: string
-          linkedin_url?: string
-          mentor_id?: string | null
-          mentor_name?: string
-          milestones?: Json
-          project_description?: string
-          project_progress?: number
-          project_title?: string
-          repo_url?: string
           subjects?: string[] | null
           tech_stack?: string[]
           username?: string

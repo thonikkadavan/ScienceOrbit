@@ -17,109 +17,210 @@ if (!admin) return Astro.redirect("/login");
   </div>
 </AdminLayout>
 
+<!-- Verification Drawer -->
+<div id="verify-drawer" class="verify-drawer">
+  <div class="verify-drawer-backdrop"></div>
+  <div class="verify-drawer-panel">
+    <button class="verify-drawer-close" id="verify-drawer-close"><span class="material-symbols-outlined">close</span></button>
+    <h2 class="verify-drawer-title">Student Verification</h2>
+    <div id="verify-drawer-body"></div>
+  </div>
+</div>
+
+<style is:global>
+  .verify-drawer { position:fixed; inset:0; z-index:1000; display:none; }
+  .verify-drawer.open { display:block; }
+  .verify-drawer-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.3); }
+  .verify-drawer-panel { position:absolute; top:0; right:0; bottom:0; width:420px; max-width:100vw; background:var(--color-surface-container-low); box-shadow:var(--shadow-extruded); padding:1.5rem; overflow-y:auto; display:flex; flex-direction:column; }
+  .verify-drawer-close { position:absolute; top:0.75rem; right:0.75rem; background:none; border:none; cursor:pointer; color:var(--color-on-surface-variant); padding:4px; border-radius:50%; }
+  .verify-drawer-close:hover { background:rgba(0,0,0,0.05); }
+  .verify-drawer-title { font-family:var(--font-headline); font-size:1.1rem; font-weight:700; margin-bottom:1.5rem; color:var(--color-on-surface); }
+  .verify-field { margin-bottom:1rem; }
+  .verify-field-label { font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--color-on-surface-variant); margin-bottom:0.15rem; }
+  .verify-field-value { font-size:0.95rem; color:var(--color-on-surface); font-weight:500; }
+  .verify-photo { width:140px; height:168px; object-fit:cover; border-radius:var(--radius-default); box-shadow:var(--shadow-extruded-sm); margin-bottom:1rem; }
+  .verify-drawer-actions { display:flex; gap:0.75rem; margin-top:auto; padding-top:1.5rem; border-top:1px solid rgba(0,0,0,0.06); }
+  .verify-drawer-actions .btn-neu { flex:1; justify-content:center; }
+  .photo-inspect { position:fixed; inset:0; z-index:1100; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); }
+  .photo-inspect.open { display:flex; }
+  .photo-inspect img { max-width:90vw; max-height:90vh; border-radius:var(--radius-md); box-shadow:0 8px 32px rgba(0,0,0,0.3); }
+  .photo-inspect-close { position:absolute; top:1rem; right:1rem; background:rgba(255,255,255,0.15); border:none; color:#fff; cursor:pointer; padding:8px; border-radius:50%; font-size:24px; }
+  .sd-row { cursor:pointer; transition:background 0.1s; }
+  .sd-row:hover { background:rgba(255,255,255,0.04); }
+</style>
+
 <script>
   import { createBrowserClient } from "@supabase/ssr";
-  function getSupabase() {
-    return createBrowserClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY
-    );
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
   }
+  function errMsg(err) {
+    return err instanceof Error ? err.message : typeof err === "string" ? err : "Request failed. Check console for details.";
+  }
+  function dastharUrl(path) {
+    if (!path) return "";
+    if (path.startsWith("http")) return path;
+    const supabase = createBrowserClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
+    return supabase.storage.from("dasthar").getPublicUrl(path).data.publicUrl;
+  }
+
+  let queueCache = [];
 
   async function loadQueue() {
     const container = document.getElementById("queue-container");
     if (!container) return;
-
     try {
-      const supabase = await getSupabase();
-
+      const supabase = createBrowserClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
       const { data, error } = await supabase
         .from("profiles")
-        .select("*, campuses(name)")
+        .select("id, so_id, username, display_name, legal_name, father_name, phone, dasthar_url, is_approved, created_at, campuses(name)")
         .eq("is_approved", false)
         .eq("is_admin", false)
         .order("created_at", { ascending: false });
-
       if (error) throw error;
-
-      if (!data || data.length === 0) {
-        container.innerHTML =
-          '<div class="empty-state">No pending registrations.</div>';
-        return;
-      }
-
-      container.innerHTML = `
-        <div class="data-table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Username</th>
-                <th>Legal Name</th>
-                <th>Campus</th>
-                <th>Registered</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data
-                .map(
-                  (p) => `
-                <tr>
-                  <td><strong>${escapeHtml(p.username)}</strong></td>
-                  <td>${escapeHtml(p.legal_name || "—")}</td>
-                  <td>${escapeHtml(p.campuses?.name || "—")}</td>
-                  <td>${new Date(p.created_at).toLocaleDateString()}</td>
-                  <td>
-                    <button class="btn-neu" data-id="${p.id}">Approve</button>
-                  </td>
-                </tr>
-              `
-                )
-                .join("")}
-            </tbody>
-          </table>
-        </div>
-      `;
-
-      container.querySelectorAll(".btn-neu").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const id = btn.getAttribute("data-id");
-          btn.disabled = true;
-          btn.textContent = "Approving...";
-
-          try {
-            const { error } = await supabase
-              .from("profiles")
-              .update({ is_approved: true })
-              .eq("id", id);
-
-            if (error) throw error;
-
-            const row = btn.closest("tr");
-            row?.remove();
-            const tbody = container.querySelector("tbody");
-            if (tbody && tbody.children.length === 0) {
-              container.innerHTML =
-                '<div class="empty-state">No pending registrations.</div>';
-            }
-          } catch (err) {
-            btn.disabled = false;
-            btn.textContent = "Approve";
-            alert("Failed to approve: " + (err instanceof Error ? err.message : "Unknown error"));
-          }
-        });
-      });
+      queueCache = data || [];
+      renderQueue();
     } catch (err) {
-      container.innerHTML = `<div class="error-state">Failed to load queue: ${err instanceof Error ? err.message : "Unknown error"}</div>`;
+      container.innerHTML = `<div class="error-state">Failed to load queue: ${errMsg(err)}</div>`;
     }
   }
 
-  function escapeHtml(str) {
-    if (!str) return "";
-    const div = document.createElement("div");
-    div.textContent = str;
-    return div.innerHTML;
+  function renderQueue() {
+    const container = document.getElementById("queue-container");
+    if (!container) return;
+    if (queueCache.length === 0) {
+      container.innerHTML = '<div class="empty-state">No pending registrations.</div>';
+      return;
+    }
+    container.innerHTML = `
+      <div style="margin-bottom:0.5rem;font-size:12px;color:var(--color-on-surface-variant)">${queueCache.length} pending registration${queueCache.length === 1 ? "" : "s"}</div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>SO ID</th>
+              <th>Legal Name</th>
+              <th>Father's Name</th>
+              <th>Phone</th>
+              <th>Campus</th>
+              <th>Registered</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${queueCache.map((p) => `
+              <tr class="sd-row" data-id="${p.id}">
+                <td><code style="color:var(--color-primary);font-weight:600">${escapeHtml(p.so_id || "—")}</code></td>
+                <td><strong>${escapeHtml(p.legal_name || p.display_name || p.username || "—")}</strong></td>
+                <td>${escapeHtml(p.father_name || "—")}</td>
+                <td>${escapeHtml(p.phone || "—")}</td>
+                <td>${escapeHtml(p.campuses?.name || "—")}</td>
+                <td>${new Date(p.created_at).toLocaleDateString()}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+    container.querySelectorAll(".sd-row").forEach((row) => {
+      row.addEventListener("click", () => {
+        const id = row.getAttribute("data-id");
+        const student = queueCache.find((s) => s.id === id);
+        if (student) openVerifyDrawer(student);
+      });
+    });
   }
+
+  /* ── Verification Drawer ── */
+  function openVerifyDrawer(student) {
+    const drawer = document.getElementById("verify-drawer");
+    const body = document.getElementById("verify-drawer-body");
+    if (!drawer || !body) return;
+    const photoUrl = student.dasthar_url ? dastharUrl(student.dasthar_url) : "";
+    body.innerHTML = `
+      ${photoUrl ? `<img src="${photoUrl}" class="verify-photo" alt="Dasthar" />` : '<div style="width:140px;height:168px;border-radius:var(--radius-default);box-shadow:var(--shadow-extruded-sm);margin-bottom:1rem;display:flex;align-items:center;justify-content:center;background:var(--color-neu-base);color:var(--color-on-surface-variant)"><span class="material-symbols-outlined" style="font-size:40px">person</span></div>'}
+      <div class="verify-field">
+        <div class="verify-field-label">Science Orbit ID</div>
+        <div class="verify-field-value"><code style="color:var(--color-primary)">${escapeHtml(student.so_id || "—")}</code></div>
+      </div>
+      <div class="verify-field">
+        <div class="verify-field-label">Full Name</div>
+        <div class="verify-field-value">${escapeHtml(student.legal_name || student.display_name || student.username || "—")}</div>
+      </div>
+      <div class="verify-field">
+        <div class="verify-field-label">Father's Name</div>
+        <div class="verify-field-value">${escapeHtml(student.father_name || "—")}</div>
+      </div>
+      <div class="verify-field">
+        <div class="verify-field-label">Email ID</div>
+        <div class="verify-field-value">—</div>
+      </div>
+      <div class="verify-field">
+        <div class="verify-field-label">Phone No</div>
+        <div class="verify-field-value">${escapeHtml(student.phone || "—")}</div>
+      </div>
+      <div class="verify-drawer-actions">
+        <button class="btn-neu" id="verify-approve" data-id="${student.id}"><span class="material-symbols-outlined" style="font-size:16px">check_circle</span> Approve Account &amp; Verify ID</button>
+        <button class="btn-neu danger" id="verify-reject" data-id="${student.id}"><span class="material-symbols-outlined" style="font-size:16px">cancel</span> Reject Submission</button>
+      </div>
+    `;
+    drawer.classList.add("open");
+
+    const supabase = createBrowserClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
+
+    document.getElementById("verify-approve")?.addEventListener("click", async () => {
+      const btn = document.getElementById("verify-approve");
+      if (!btn) return;
+      btn.disabled = true;
+      btn.textContent = "Approving...";
+      try {
+        const { error } = await supabase.from("profiles").update({ is_approved: true }).eq("id", student.id);
+        if (error) throw error;
+        btn.textContent = "Approved ✓";
+        btn.style.color = "#16a34a";
+        queueCache = queueCache.filter((s) => s.id !== student.id);
+        renderQueue();
+      } catch (err) {
+        console.error("Approve:", err);
+        btn.disabled = false;
+        btn.textContent = "Approve Account & Verify ID";
+        alert("Failed: " + errMsg(err));
+      }
+    });
+
+    document.getElementById("verify-reject")?.addEventListener("click", async () => {
+      if (!confirm(`Reject registration for ${escapeHtml(student.legal_name || student.username)}?`)) return;
+      const btn = document.getElementById("verify-reject");
+      if (!btn) return;
+      btn.disabled = true;
+      btn.textContent = "Rejecting...";
+      try {
+        if (student.dasthar_url) {
+          await supabase.storage.from("dasthar").remove([student.dasthar_url]);
+        }
+        const { error } = await supabase.from("profiles").delete().eq("id", student.id);
+        if (error) throw error;
+        drawer.classList.remove("open");
+        queueCache = queueCache.filter((s) => s.id !== student.id);
+        renderQueue();
+      } catch (err) {
+        console.error("Reject:", err);
+        btn.disabled = false;
+        btn.textContent = "Reject Submission";
+        alert("Failed: " + errMsg(err));
+      }
+    });
+  }
+
+  document.getElementById("verify-drawer-close")?.addEventListener("click", () => {
+    document.getElementById("verify-drawer")?.classList.remove("open");
+  });
+  document.querySelector(".verify-drawer-backdrop")?.addEventListener("click", () => {
+    document.getElementById("verify-drawer")?.classList.remove("open");
+  });
 
   loadQueue();
 </script>
