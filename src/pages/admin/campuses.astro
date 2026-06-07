@@ -10,22 +10,99 @@ if (!admin) return Astro.redirect("/login");
 
 <AdminLayout title="Campus Management" activeTab="campuses">
   <h1>Campus Management</h1>
-  <p class="subtitle">Add and manage campuses</p>
+  <p class="subtitle">Add, manage, and filter campuses by academic tier</p>
 
   <div class="neu-card" style="margin-bottom:1.5rem">
-    <form id="add-campus-form" style="display:flex;gap:0.5rem;align-items:center">
-      <div class="neu-input-wrap" style="flex:1">
+    <form id="add-campus-form" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+      <div class="neu-input-wrap" style="flex:1;min-width:180px">
         <input type="text" id="campus-name" required placeholder="New campus name..." />
+      </div>
+      <div class="neu-input-wrap" style="min-width:160px">
+        <select id="campus-tier">
+          <option value="">No tier</option>
+          <option value="JUNIOR">Junior</option>
+          <option value="FOUNDATION">Foundation</option>
+          <option value="UG">UG (Undergraduate)</option>
+          <option value="PG">PG (Postgraduate)</option>
+          <option value="PHD">PhD (Doctorate)</option>
+        </select>
       </div>
       <button type="submit" class="btn-neu">Add Campus</button>
     </form>
     <p id="campus-error" class="error-msg"></p>
   </div>
 
+  <div class="gov-toolbar" style="margin-bottom:1rem">
+    <div class="tier-filter-chips" id="tier-filter-chips">
+      <button class="tier-chip active" data-tier="">All Tiers</button>
+      <button class="tier-chip" data-tier="JUNIOR">Junior</button>
+      <button class="tier-chip" data-tier="FOUNDATION">Foundation</button>
+      <button class="tier-chip" data-tier="UG">UG</button>
+      <button class="tier-chip" data-tier="PG">PG</button>
+      <button class="tier-chip" data-tier="PHD">PhD</button>
+    </div>
+  </div>
+
   <div id="campuses-container">
     <p class="loading">Loading...</p>
   </div>
 </AdminLayout>
+
+<style is:global>
+  .tier-filter-chips {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+  .tier-chip {
+    padding: 0.35rem 0.85rem;
+    border: none;
+    border-radius: var(--radius-xl);
+    background: transparent;
+    color: var(--color-on-surface-variant);
+    font-family: var(--font-label);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.02em;
+    box-shadow: var(--shadow-recessed);
+  }
+  .tier-chip.active {
+    box-shadow: var(--shadow-extruded-sm);
+    color: var(--color-primary);
+  }
+  .tier-chip:hover:not(.active) {
+    color: var(--color-on-surface);
+  }
+  .tier-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--radius-sm);
+    margin-right: 0.2rem;
+    letter-spacing: 0.03em;
+  }
+  .tier-badge.JUNIOR { background: #dbeafe; color: #1d4ed8; }
+  .tier-badge.FOUNDATION { background: #d1fae5; color: #047857; }
+  .tier-badge.UG { background: #fef3c7; color: #b45309; }
+  .tier-badge.PG { background: #e0e7ff; color: #4338ca; }
+  .tier-badge.PHD { background: #fce7f3; color: #be185d; }
+  .neu-input-wrap select {
+    width: 100%;
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: var(--radius-default);
+    font-size: 0.9rem;
+    outline: none;
+    background: var(--color-neu-base);
+    box-shadow: var(--shadow-recessed);
+    font-family: inherit;
+    cursor: pointer;
+    appearance: auto;
+  }
+</style>
 
 <script>
   import { createBrowserClient } from "@supabase/ssr";
@@ -36,89 +113,8 @@ if (!admin) return Astro.redirect("/login");
     );
   }
 
-  async function loadCampuses() {
-    const container = document.getElementById("campuses-container");
-    if (!container) return;
-
-    try {
-      const supabase = await getSupabase();
-      const { data, error } = await supabase
-        .from("campuses")
-        .select("*")
-        .order("name");
-
-      if (error) throw error;
-
-      if (!data || data.length === 0) {
-        container.innerHTML =
-          '<div class="empty-state">No campuses defined yet.</div>';
-        return;
-      }
-
-      container.innerHTML = `
-        <div class="data-table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Created</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data
-                .map(
-                  (c) => `
-                <tr>
-                  <td><strong>${escapeHtml(c.name)}</strong></td>
-                  <td>${new Date(c.created_at).toLocaleDateString()}</td>
-                  <td>
-                    <button class="btn-neu btn-neu-sm danger" data-id="${c.id}" data-name="${escapeHtml(c.name)}">Delete</button>
-                  </td>
-                </tr>
-              `
-                )
-                .join("")}
-            </tbody>
-          </table>
-        </div>
-      `;
-
-      container.querySelectorAll(".btn-neu.danger").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const name = btn.getAttribute("data-name");
-          if (!confirm(`Delete campus "${name}"? This may affect student profiles.`)) return;
-
-          const id = btn.getAttribute("data-id");
-          btn.disabled = true;
-          btn.textContent = "Deleting...";
-
-          try {
-            const supabase = await getSupabase();
-            const { error } = await supabase
-              .from("campuses")
-              .delete()
-              .eq("id", id);
-
-            if (error) throw error;
-
-            btn.closest("tr")?.remove();
-            const tbody = container.querySelector("tbody");
-            if (tbody && tbody.children.length === 0) {
-              container.innerHTML =
-                '<div class="empty-state">No campuses defined yet.</div>';
-            }
-          } catch (err) {
-            btn.disabled = false;
-            btn.textContent = "Delete";
-            alert("Failed to delete: " + (err instanceof Error ? err.message : "Unknown error"));
-          }
-        });
-      });
-    } catch (err) {
-      container.innerHTML = `<div class="error-state">Failed to load: ${err instanceof Error ? err.message : "Unknown error"}</div>`;
-    }
-  }
+  let campusCache = [];
+  let tierFilter = "";
 
   function escapeHtml(str) {
     if (!str) return "";
@@ -127,23 +123,137 @@ if (!admin) return Astro.redirect("/login");
     return div.innerHTML;
   }
 
+  async function loadCampuses() {
+    const container = document.getElementById("campuses-container");
+    if (!container) return;
+    try {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase
+        .from("campuses")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      campusCache = data || [];
+      renderCampuses();
+    } catch (err) {
+      container.innerHTML = `<div class="error-state">Failed to load: ${err instanceof Error ? err.message : "Unknown error"}</div>`;
+    }
+  }
+
+  function renderCampuses() {
+    const container = document.getElementById("campuses-container");
+    if (!container) return;
+
+    let list = campusCache;
+    if (tierFilter) {
+      list = list.filter((c) => (c.academic_tiers || []).includes(tierFilter));
+    }
+
+    if (list.length === 0) {
+      container.innerHTML = '<div class="empty-state">No campuses found for this tier.</div>';
+      return;
+    }
+
+    container.innerHTML = `
+      <div style="margin-bottom:0.5rem;font-size:12px;color:var(--color-on-surface-variant)">${list.length} campus${list.length === 1 ? "" : "es"}</div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Academic Tiers</th>
+              <th>Created</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${list.map((c) => {
+              const tiers = c.academic_tiers || [];
+              const tierBadges = tiers.length
+                ? tiers.map((t) => `<span class="tier-badge ${t}">${t}</span>`).join("")
+                : '<span style="color:var(--color-on-surface-variant);font-size:12px">—</span>';
+              return `
+                <tr>
+                  <td><strong>${escapeHtml(c.name)}</strong></td>
+                  <td>${tierBadges}</td>
+                  <td>${new Date(c.created_at).toLocaleDateString()}</td>
+                  <td>
+                    <button class="btn-neu btn-neu-sm danger" data-id="${c.id}" data-name="${escapeHtml(c.name)}">Delete</button>
+                  </td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    container.querySelectorAll(".btn-neu.danger").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const name = btn.getAttribute("data-name");
+        if (!confirm(`Delete campus "${name}"? This may affect student profiles.`)) return;
+        const id = btn.getAttribute("data-id");
+        btn.disabled = true;
+        btn.textContent = "Deleting...";
+        try {
+          const supabase = await getSupabase();
+          const { error } = await supabase.from("campuses").delete().eq("id", id);
+          if (error) throw error;
+          btn.closest("tr")?.remove();
+          campusCache = campusCache.filter((c) => c.id !== id);
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = "Delete";
+          alert("Failed to delete: " + (err instanceof Error ? err.message : "Unknown error"));
+        }
+      });
+    });
+  }
+
+  // Tier filter chips
+  document.querySelectorAll(".tier-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      document.querySelectorAll(".tier-chip").forEach((c) => c.classList.remove("active"));
+      chip.classList.add("active");
+      tierFilter = chip.getAttribute("data-tier");
+      renderCampuses();
+    });
+  });
+
   document.getElementById("add-campus-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const input = document.getElementById("campus-name") as HTMLInputElement;
+    const input = document.getElementById("campus-name");
+    const tierSelect = document.getElementById("campus-tier");
     const errorEl = document.getElementById("campus-error");
     if (!input || !errorEl) return;
 
     errorEl.textContent = "";
     const name = input.value.trim();
+    const tier = tierSelect?.value || "";
     if (!name) return;
 
     input.disabled = true;
 
     try {
       const supabase = await getSupabase();
-      const { error } = await supabase.from("campuses").insert({ name });
 
-      if (error) throw error;
+      // Check if campus exists, if so append tier
+      const { data: existing } = await supabase
+        .from("campuses")
+        .select("id, academic_tiers")
+        .eq("name", name)
+        .single();
+
+      if (existing) {
+        const currentTiers = existing.academic_tiers || [];
+        if (tier && !currentTiers.includes(tier)) {
+          currentTiers.push(tier);
+          await supabase.from("campuses").update({ academic_tiers: currentTiers }).eq("id", existing.id);
+        }
+      } else {
+        const tiers = tier ? [tier] : [];
+        await supabase.from("campuses").insert({ name, academic_tiers: tiers });
+      }
 
       input.value = "";
       loadCampuses();
@@ -157,5 +267,3 @@ if (!admin) return Astro.redirect("/login");
 
   loadCampuses();
 </script>
-
-

@@ -118,6 +118,12 @@ if (!admin) return Astro.redirect("/login");
   .photo-inspect.open { display:flex; }
   .photo-inspect img { max-width:90vw; max-height:90vh; border-radius:var(--radius-md); box-shadow:0 8px 32px rgba(0,0,0,0.3); }
   .photo-inspect-close { position:absolute; top:1rem; right:1rem; background:rgba(255,255,255,0.15); border:none; color:#fff; cursor:pointer; padding:8px; border-radius:50%; font-size:24px; }
+  .tier-badge { display:inline-block; font-size:10px; font-weight:700; padding:0.15rem 0.4rem; border-radius:var(--radius-sm); letter-spacing:0.03em; }
+  .tier-badge.JUNIOR { background:#dbeafe; color:#1d4ed8; }
+  .tier-badge.FOUNDATION { background:#d1fae5; color:#047857; }
+  .tier-badge.UG { background:#fef3c7; color:#b45309; }
+  .tier-badge.PG { background:#e0e7ff; color:#4338ca; }
+  .tier-badge.PHD { background:#fce7f3; color:#be185d; }
 </style>
 
 <script>
@@ -161,7 +167,7 @@ if (!admin) return Astro.redirect("/login");
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, so_id, username, display_name, legal_name, father_name, phone, dasthar_url, is_approved, created_at, campuses(name)")
+        .select("id, so_id, username, display_name, legal_name, father_name, phone, dasthar_url, is_approved, created_at, academic_tier, course_name, job_title, organisation, campuses(name)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       studentCache = data || [];
@@ -199,6 +205,7 @@ if (!admin) return Astro.redirect("/login");
             <th>SO ID</th>
             <th>Legal Name</th>
             <th>Father's Name</th>
+            <th>Tier</th>
             <th>Phone</th>
             <th>Photo</th>
             <th>Campus</th>
@@ -210,6 +217,7 @@ if (!admin) return Astro.redirect("/login");
                 <td><code style="color:var(--color-primary);font-weight:600">${escapeHtml(p.so_id || "—")}</code></td>
                 <td><strong>${escapeHtml(p.legal_name || p.display_name || p.username || "—")}</strong></td>
                 <td>${escapeHtml(p.father_name || "—")}</td>
+                <td>${p.academic_tier ? `<span class="tier-badge ${p.academic_tier}">${escapeHtml(p.academic_tier)}</span>` : '<span style="color:var(--color-on-surface-variant);font-size:12px">—</span>'}</td>
                 <td>${escapeHtml(p.phone || "—")}</td>
                 <td>${p.dasthar_url
                   ? `<div class="verify-thumb-overlay" data-dasthar="${escapeHtml(p.dasthar_url)}"><img src="${escapeHtml(dastharUrl(p.dasthar_url))}" class="sd-thumb" alt="Dasthar" /></div>`
@@ -282,6 +290,21 @@ if (!admin) return Astro.redirect("/login");
         <div class="verify-field-label">Phone No</div>
         <div class="verify-field-value">${phone}</div>
       </div>
+      ${student.academic_tier ? `
+      <div class="verify-field">
+        <div class="verify-field-label">Academic Tier</div>
+        <div class="verify-field-value"><span class="tier-badge ${escapeHtml(student.academic_tier)}">${escapeHtml(student.academic_tier)}</span></div>
+      </div>` : ""}
+      ${student.course_name ? `
+      <div class="verify-field">
+        <div class="verify-field-label">Course Name / Subject</div>
+        <div class="verify-field-value">${escapeHtml(student.course_name)}</div>
+      </div>` : ""}
+      ${student.job_title || student.organisation ? `
+      <div class="verify-field">
+        <div class="verify-field-label">Employment</div>
+        <div class="verify-field-value">${[escapeHtml(student.job_title), escapeHtml(student.organisation)].filter(Boolean).join(" · ")}</div>
+      </div>` : ""}
       <div class="verify-drawer-actions">
         <button class="btn-neu" id="verify-approve" data-id="${student.id}"><span class="material-symbols-outlined" style="font-size:16px">check_circle</span> ${student.is_approved ? "Already Approved" : "Approve Account &amp; Verify ID"}</button>
         <button class="btn-neu danger" id="verify-reject" data-id="${student.id}"><span class="material-symbols-outlined" style="font-size:16px">cancel</span> Reject Submission</button>

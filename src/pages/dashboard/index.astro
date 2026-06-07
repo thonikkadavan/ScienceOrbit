@@ -33,6 +33,11 @@ const projectDescription = profile.project_description || "";
 const projectProgress = profile.project_progress || 0;
 const githubHandle = profile.github_handle || "";
 const linkedinUrl = profile.linkedin_url || "";
+const academicTier = profile.academic_tier || "";
+const courseName = profile.course_name || "";
+const jobTitle = profile.job_title || "";
+const organisation = profile.organisation || "";
+const isAlumni = !!(jobTitle && organisation);
 const techStack: string[] = profile.tech_stack || [];
 const repoUrl = profile.repo_url || "";
 const deployUrl = profile.deploy_url || "";
@@ -212,6 +217,16 @@ function getTimeAgo(dateStr: string): string {
                     <span class="pp-orbit-label">Orbiting</span>
                   </div>
                 </div>
+                {academicTier && <span class="pp-tier-badge">{academicTier}</span>}
+                {isAlumni && (
+                  <div class="pp-alumni-block">
+                    <span class="pp-alumni-badge">Alumni</span>
+                    <span class="pp-alumni-detail">{jobTitle} &middot; {organisation}</span>
+                  </div>
+                )}
+                {courseName && academicTier && ["UG","PG","PHD"].includes(academicTier) && (
+                  <p class="pp-course-name">{courseName}</p>
+                )}
                 {!isOwner && (
                   <button class="pp-follow-btn" id="orbit-btn" data-user-id={profile.id} data-orbiting={isOrbiting}>
                     {isOrbiting ? "Following" : "Follow"}
@@ -761,6 +776,50 @@ function getTimeAgo(dateStr: string): string {
   .pp-orbit-num {
     font-weight: 800;
     color: #0d9488;
+  }
+
+  .pp-tier-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-xl);
+    background: var(--color-primary-container);
+    color: var(--color-primary);
+    letter-spacing: 0.03em;
+    margin-top: 0.5rem;
+  }
+
+  .pp-alumni-block {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .pp-alumni-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-sm);
+    background: #dbeafe;
+    color: #1d4ed8;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .pp-alumni-detail {
+    font-size: 13px;
+    color: var(--color-on-surface-variant);
+  }
+
+  .pp-course-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-tertiary);
+    margin: 0.35rem 0 0;
   }
 
   .pp-follow-btn {

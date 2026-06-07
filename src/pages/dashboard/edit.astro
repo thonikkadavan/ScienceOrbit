@@ -179,6 +179,25 @@ try {
                 </div>
 
                 <div class="form-group">
+                  <label for="academic_tier">Academic Tier</label>
+                  <div class="neu-input-wrap">
+                    <select id="academic_tier" class="neu-input neu-input-iconed">
+                      <option value="">— Select tier —</option>
+                      <option value="JUNIOR" selected={profile.academic_tier === "JUNIOR"}>Junior</option>
+                      <option value="FOUNDATION" selected={profile.academic_tier === "FOUNDATION"}>Foundation</option>
+                      <option value="UG" selected={profile.academic_tier === "UG"}>UG (Undergraduate)</option>
+                      <option value="PG" selected={profile.academic_tier === "PG"}>PG (Postgraduate)</option>
+                      <option value="PHD" selected={profile.academic_tier === "PHD"}>PhD (Doctorate)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group" id="edit-course-group" style={["UG","PG","PHD"].includes(profile.academic_tier) ? "" : "display:none"}>
+                  <label for="course_name">Course Name / Subject</label>
+                  <input type="text" id="course_name" class="neu-input" placeholder="e.g. BSc Physics, MA History" value={profile.course_name || ""} />
+                </div>
+
+                <div class="form-group">
                   <label for="mentor_id">Academic Mentor / Supervisor</label>
                   <div class="neu-input-wrap">
                     <span class="material-symbols-outlined neu-input-icon">school</span>
@@ -214,6 +233,19 @@ try {
                       </button>
                     </div>
                   </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Professional Employment</label>
+                  <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                    <div class="neu-input-wrap" style="flex:1;min-width:140px">
+                      <input type="text" id="job_title" class="neu-input" placeholder="Job Title" value={profile.job_title || ""} />
+                    </div>
+                    <div class="neu-input-wrap" style="flex:1;min-width:140px">
+                      <input type="text" id="organisation" class="neu-input" placeholder="Organisation" value={profile.organisation || ""} />
+                    </div>
+                  </div>
+                  <small style="color:var(--color-on-surface-variant);font-size:0.75rem">If filled, your profile will show an "Alumni" badge.</small>
                 </div>
 
                 <div class="form-section-divider">
@@ -643,6 +675,10 @@ try {
       const campusId = document.getElementById("campus_id").value;
       const mentorName = document.getElementById("mentor_name").value.trim();
       const mentorId = document.getElementById("mentor_id").value;
+      const academicTier = document.getElementById("academic_tier").value;
+      const courseName = document.getElementById("course_name").value.trim();
+      const jobTitle = document.getElementById("job_title").value.trim();
+      const organisation = document.getElementById("organisation").value.trim();
       const achievements = document.getElementById("achievements")?.value?.trim() || "";
       const repoUrl = document.getElementById("repo_url").value.trim();
       const deployUrl = document.getElementById("deploy_url").value.trim();
@@ -657,6 +693,10 @@ try {
           campus_id: campusId || null,
           mentor_name: mentorName,
           mentor_id: mentorId || null,
+          academic_tier: academicTier,
+          course_name: courseName,
+          job_title: jobTitle,
+          organisation: organisation,
           subjects: selectedSubjects,
           achievements,
           tech_stack: selectedTech,
@@ -759,6 +799,16 @@ try {
     const progressVal = document.getElementById("progress-val");
     progressSlider?.addEventListener("input", () => {
       if (progressVal) progressVal.textContent = progressSlider.value;
+    });
+
+    // Academic tier → toggle course name
+    const tierSelect = document.getElementById("academic_tier");
+    const courseGroup = document.getElementById("edit-course-group");
+    tierSelect?.addEventListener("change", () => {
+      const val = tierSelect.value;
+      if (courseGroup) {
+        courseGroup.style.display = ["UG", "PG", "PHD"].includes(val) ? "block" : "none";
+      }
     });
 
     // Discard confirmation

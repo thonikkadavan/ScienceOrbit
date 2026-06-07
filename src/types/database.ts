@@ -11,16 +11,19 @@ export type Database = {
     Tables: {
       campuses: {
         Row: {
+          academic_tiers: string[] | null
           created_at: string | null
           id: string
           name: string
         }
         Insert: {
+          academic_tiers?: string[] | null
           created_at?: string | null
           id?: string
           name: string
         }
         Update: {
+          academic_tiers?: string[] | null
           created_at?: string | null
           id?: string
           name?: string
@@ -29,9 +32,11 @@ export type Database = {
       }
       profiles: {
         Row: {
+          academic_tier: string
           achievements: string | null
           avatar_url: string | null
           campus_id: string | null
+          course_name: string
           created_at: string | null
           dasthar_url: string
           display_name: string
@@ -41,11 +46,13 @@ export type Database = {
           id: string
           is_admin: boolean | null
           is_approved: boolean | null
+          job_title: string
           legal_name: string
           linkedin_url: string
           mentor_id: string | null
           mentor_name: string
           milestones: Json
+          organisation: string
           phone: string
           project_description: string
           project_progress: number
@@ -58,9 +65,11 @@ export type Database = {
           username: string
         }
         Insert: {
+          academic_tier?: string
           achievements?: string | null
           avatar_url?: string | null
           campus_id?: string | null
+          course_name?: string
           created_at?: string | null
           dasthar_url?: string
           display_name?: string
@@ -70,11 +79,13 @@ export type Database = {
           id: string
           is_admin?: boolean | null
           is_approved?: boolean | null
+          job_title?: string
           legal_name?: string
           linkedin_url?: string
           mentor_id?: string | null
           mentor_name?: string
           milestones?: Json
+          organisation?: string
           phone?: string
           project_description?: string
           project_progress?: number
@@ -87,9 +98,11 @@ export type Database = {
           username: string
         }
         Update: {
+          academic_tier?: string
           achievements?: string | null
           avatar_url?: string | null
           campus_id?: string | null
+          course_name?: string
           created_at?: string | null
           dasthar_url?: string
           display_name?: string
@@ -99,11 +112,13 @@ export type Database = {
           id?: string
           is_admin?: boolean | null
           is_approved?: boolean | null
+          job_title?: string
           legal_name?: string
           linkedin_url?: string
           mentor_id?: string | null
           mentor_name?: string
           milestones?: Json
+          organisation?: string
           phone?: string
           project_description?: string
           project_progress?: number
