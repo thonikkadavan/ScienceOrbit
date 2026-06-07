@@ -47,6 +47,11 @@ if (!admin) return Astro.redirect("/login");
   .photo-inspect-close { position:absolute; top:1rem; right:1rem; background:rgba(255,255,255,0.15); border:none; color:#fff; cursor:pointer; padding:8px; border-radius:50%; font-size:24px; }
   .sd-row { cursor:pointer; transition:background 0.1s; }
   .sd-row:hover { background:rgba(255,255,255,0.04); }
+  .sd-thumb { width:40px; height:48px; border-radius:var(--radius-sm); object-fit:cover; cursor:pointer; box-shadow:var(--shadow-extruded-sm); transition:transform 0.15s; display:block; }
+  .sd-thumb:hover { transform:scale(1.1); }
+  .verify-thumb-overlay { position:relative; display:inline-block; cursor:pointer; }
+  .verify-thumb-overlay::after { content:'zoom_in'; font-family:'Material Symbols Outlined'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.3); color:#fff; font-size:24px; border-radius:var(--radius-sm); opacity:0; transition:opacity 0.15s; }
+  .verify-thumb-overlay:hover::after { opacity:1; }
 </style>
 
 <script>
@@ -106,6 +111,7 @@ if (!admin) return Astro.redirect("/login");
               <th>Legal Name</th>
               <th>Father's Name</th>
               <th>Phone</th>
+              <th>Photo</th>
               <th>Campus</th>
               <th>Registered</th>
             </tr>
@@ -117,6 +123,10 @@ if (!admin) return Astro.redirect("/login");
                 <td><strong>${escapeHtml(p.legal_name || p.display_name || p.username || "—")}</strong></td>
                 <td>${escapeHtml(p.father_name || "—")}</td>
                 <td>${escapeHtml(p.phone || "—")}</td>
+                <td>${p.dasthar_url
+                  ? `<div class="verify-thumb-overlay" data-dasthar="${escapeHtml(p.dasthar_url)}"><img src="${escapeHtml(dastharUrl(p.dasthar_url))}" class="sd-thumb" alt="Dasthar" /></div>`
+                  : '<span style="color:var(--color-on-surface-variant);font-size:12px">—</span>'
+                }</td>
                 <td>${escapeHtml(p.campuses?.name || "—")}</td>
                 <td>${new Date(p.created_at).toLocaleDateString()}</td>
               </tr>
@@ -132,6 +142,29 @@ if (!admin) return Astro.redirect("/login");
         if (student) openVerifyDrawer(student);
       });
     });
+    container.querySelectorAll(".verify-thumb-overlay").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const path = el.getAttribute("data-dasthar");
+        openPhotoInspect(dastharUrl(path));
+      });
+    });
+  }
+
+  /* ── Photo Inspection Modal ── */
+  function openPhotoInspect(url) {
+    let modal = document.getElementById("photo-inspect-modal");
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "photo-inspect-modal";
+      modal.className = "photo-inspect";
+      modal.innerHTML = `<button class="photo-inspect-close" id="photo-inspect-close"><span class="material-symbols-outlined">close</span></button><img src="" alt="Dasthar full" />`;
+      document.body.appendChild(modal);
+      document.getElementById("photo-inspect-close")?.addEventListener("click", () => modal.classList.remove("open"));
+      modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("open"); });
+    }
+    modal.querySelector("img").src = url;
+    modal.classList.add("open");
   }
 
   /* ── Verification Drawer ── */
@@ -139,6 +172,7 @@ if (!admin) return Astro.redirect("/login");
     const drawer = document.getElementById("verify-drawer");
     const body = document.getElementById("verify-drawer-body");
     if (!drawer || !body) return;
+    const supabase = createBrowserClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
     const photoUrl = student.dasthar_url ? dastharUrl(student.dasthar_url) : "";
     body.innerHTML = `
       ${photoUrl ? `<img src="${photoUrl}" class="verify-photo" alt="Dasthar" />` : '<div style="width:140px;height:168px;border-radius:var(--radius-default);box-shadow:var(--shadow-extruded-sm);margin-bottom:1rem;display:flex;align-items:center;justify-content:center;background:var(--color-neu-base);color:var(--color-on-surface-variant)"><span class="material-symbols-outlined" style="font-size:40px">person</span></div>'}
@@ -156,7 +190,7 @@ if (!admin) return Astro.redirect("/login");
       </div>
       <div class="verify-field">
         <div class="verify-field-label">Email ID</div>
-        <div class="verify-field-value">—</div>
+        <div class="verify-field-value" id="verify-email-field"><span class="loading" style="font-size:12px">Loading...</span></div>
       </div>
       <div class="verify-field">
         <div class="verify-field-label">Phone No</div>
@@ -169,7 +203,17 @@ if (!admin) return Astro.redirect("/login");
     `;
     drawer.classList.add("open");
 
-    const supabase = createBrowserClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
+    // Fetch email asynchronously
+    (async () => {
+      try {
+        const { data: emailResult, error: emailErr } = await supabase.rpc("get_user_email", { user_id: student.id });
+        const emailField = document.getElementById("verify-email-field");
+        if (emailField) emailField.textContent = emailErr || !emailResult ? "—" : escapeHtml(emailResult);
+      } catch (e) {
+        const emailField = document.getElementById("verify-email-field");
+        if (emailField) emailField.textContent = "—";
+      }
+    })();
 
     document.getElementById("verify-approve")?.addEventListener("click", async () => {
       const btn = document.getElementById("verify-approve");

@@ -257,9 +257,9 @@ if (!admin) return Astro.redirect("/login");
     const photoUrl = student.dasthar_url ? dastharUrl(student.dasthar_url) : "";
     const fullName = escapeHtml(student.legal_name || student.display_name || student.username || "—");
     const fatherName = escapeHtml(student.father_name || "—");
-    const email = "—";
     const phone = escapeHtml(student.phone || "—");
     const soId = escapeHtml(student.so_id || "—");
+
     body.innerHTML = `
       ${photoUrl ? `<img src="${photoUrl}" class="verify-photo" alt="Dasthar" />` : '<div style="width:140px;height:168px;border-radius:var(--radius-default);box-shadow:var(--shadow-extruded-sm);margin-bottom:1rem;display:flex;align-items:center;justify-content:center;background:var(--color-neu-base);color:var(--color-on-surface-variant)"><span class="material-symbols-outlined" style="font-size:40px">person</span></div>'}
       <div class="verify-field">
@@ -276,7 +276,7 @@ if (!admin) return Astro.redirect("/login");
       </div>
       <div class="verify-field">
         <div class="verify-field-label">Email ID</div>
-        <div class="verify-field-value">${email}</div>
+        <div class="verify-field-value" id="verify-email-field"><span class="loading" style="font-size:12px">Loading...</span></div>
       </div>
       <div class="verify-field">
         <div class="verify-field-label">Phone No</div>
@@ -288,6 +288,20 @@ if (!admin) return Astro.redirect("/login");
       </div>
     `;
     drawer.classList.add("open");
+
+    // Fetch email asynchronously
+    (async () => {
+      try {
+        const { data: emailResult, error: emailErr } = await supabase.rpc("get_user_email", { user_id: student.id });
+        const emailField = document.getElementById("verify-email-field");
+        if (emailField) {
+          emailField.textContent = emailErr || !emailResult ? "—" : escapeHtml(emailResult);
+        }
+      } catch (e) { 
+        const emailField = document.getElementById("verify-email-field");
+        if (emailField) emailField.textContent = "—";
+      }
+    })();
 
     // Approve handler
     const approveBtn = document.getElementById("verify-approve");
