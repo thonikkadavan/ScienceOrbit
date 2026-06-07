@@ -22,6 +22,9 @@ const isApproved = profile.is_approved ?? false;
 const avatarUrl = profile.avatar_url
   ? supabase.storage.from("avatars").getPublicUrl(profile.avatar_url).data.publicUrl
   : null;
+const dastharUrl = profile.dasthar_url
+  ? supabase.storage.from("dasthar").getPublicUrl(profile.dasthar_url).data.publicUrl
+  : null;
 const campusName = profile.campuses?.name ?? "";
 const mentorName = profile.mentors?.name || profile.mentor_name;
 const portfolioUrl = `${Astro.url.origin}/dashboard?user=${profile.id}`;
@@ -171,21 +174,38 @@ function getTimeAgo(dateStr: string): string {
           <!-- Profile Hero Card -->
           <div class="pp-card pp-hero-card">
             <div class="pp-hero-inner">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt={profile.display_name} class="pp-avatar" />
-              ) : (
-                <div class="pp-avatar pp-avatar-placeholder">
-                  <span class="material-symbols-outlined">person</span>
-                </div>
-              )}
+              <div class="pp-hero-avatars">
+                {dastharUrl ? (
+                  <img src={dastharUrl} alt={profile.display_name} class="pp-dasthar" />
+                ) : avatarUrl ? (
+                  <img src={avatarUrl} alt={profile.display_name} class="pp-avatar" />
+                ) : (
+                  <div class="pp-avatar pp-avatar-placeholder">
+                    <span class="material-symbols-outlined">person</span>
+                  </div>
+                )}
+              </div>
               <div class="pp-hero-body">
-                <h1 class="pp-name">{profile.display_name || profile.username}</h1>
+                <h1 class="pp-name">{profile.legal_name || profile.display_name || profile.username}</h1>
+                {profile.so_id && <code class="pp-so-id">{profile.so_id}</code>}
                 <p class="pp-role">{profile.mentor_name || "Scholar"}</p>
                 <div class="pp-meta">
+                  {profile.father_name && (
+                    <span class="pp-meta-item">
+                      <span class="material-symbols-outlined pp-meta-icon">family_history</span>
+                      {profile.father_name}
+                    </span>
+                  )}
                   <span class="pp-meta-item">
                     <span class="material-symbols-outlined pp-meta-icon">location_on</span>
                     {campusName || "Not affiliated"}
                   </span>
+                  {profile.phone && (
+                    <span class="pp-meta-item">
+                      <span class="material-symbols-outlined pp-meta-icon">call</span>
+                      {profile.phone}
+                    </span>
+                  )}
                   {mentorName && (
                     <span class="pp-meta-item">
                       <span class="material-symbols-outlined pp-meta-icon">school</span>
@@ -644,6 +664,35 @@ function getTimeAgo(dateStr: string): string {
 
   .pp-avatar-placeholder .material-symbols-outlined {
     font-size: 3rem;
+  }
+
+  .pp-hero-avatars {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .pp-dasthar {
+    width: 128px;
+    height: 154px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+    box-shadow: 8px 8px 16px #D1D9E6, -8px -8px 16px #FFFFFF;
+    flex-shrink: 0;
+  }
+
+  .pp-so-id {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-primary);
+    background: var(--color-primary-container);
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-sm);
+    letter-spacing: 0.03em;
+    margin-top: 0.15rem;
   }
 
   .pp-hero-body {
