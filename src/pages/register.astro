@@ -142,6 +142,23 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           </div>
 
         </form>
+
+        <!-- Photo Crop Modal -->
+        <div id="photo-crop-modal" class="photo-crop-modal" style="display:none">
+          <div class="photo-crop-backdrop"></div>
+          <div class="photo-crop-content">
+            <div class="photo-crop-header">Crop your photo</div>
+            <div class="photo-crop-stage" id="photo-crop-stage">
+              <img id="photo-crop-image" draggable="false" />
+              <div class="photo-crop-circle"></div>
+            </div>
+            <div class="photo-crop-actions">
+              <button type="button" class="btn-neu" id="crop-cancel">Cancel</button>
+              <button type="button" class="btn-neu btn-next" id="crop-confirm">Crop &amp; Save</button>
+            </div>
+          </div>
+        </div>
+
         <p class="auth-footer">
           Already have an account? <a href="/login">Sign in</a>
         </p>
@@ -270,6 +287,58 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .dasthar-preview-img { width: 120px; height: 144px; object-fit: cover; border-radius: var(--radius-default); box-shadow: var(--shadow-extruded-sm); }
 
   .auth-footer { margin-top: 1.25rem; text-align: center; font-size: 0.85rem; color: var(--color-on-surface-variant); }
+
+  /* ── Photo Crop Modal ── */
+  .photo-crop-modal {
+    position: fixed; inset: 0; z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .photo-crop-backdrop {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.7);
+  }
+  .photo-crop-content {
+    position: relative;
+    background: var(--color-surface-container-low);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: var(--shadow-extruded);
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+  .photo-crop-header {
+    font-family: var(--font-headline); font-size: 1.1rem; text-align: center;
+  }
+  .photo-crop-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: var(--radius-default);
+    background: #111;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+  .photo-crop-stage:active { cursor: grabbing; }
+  .photo-crop-stage img {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform-origin: center center;
+    pointer-events: none;
+  }
+  .photo-crop-circle {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    background: radial-gradient(circle at center, transparent min(45%, 160px), rgba(0,0,0,0.55) min(calc(45% + 1px), calc(160px + 1px)), rgba(0,0,0,0.55) 100%);
+  }
+  .photo-crop-actions {
+    display: flex; gap: 0.5rem; justify-content: flex-end;
+  }
+
 </style>
 
 <script>
@@ -515,25 +584,172 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     }
   });
 
-  // ── Dasthar Upload & Preview ──
+  // ── Dasthar Upload & Photo Crop ──
   const dastharInput = document.getElementById("dasthar");
   const dastharPreview = document.getElementById("dasthar-preview");
+  const cropModal = document.getElementById("photo-crop-modal");
+  const cropImage = document.getElementById("photo-crop-image");
+  const cropStage = document.getElementById("photo-crop-stage");
+  let cropState = null; // { scale, offsetX, offsetY, imgWidth, imgHeight }
 
+  // ── End crop (cleanup) ──
+  function closeCrop() {
+    cropState = null;
+    cropImage.src = "";
+    cropImage.style.transform = "";
+    cropModal.style.display = "none";
+  }
+
+  // ── Apply transform ──
+  function applyCropTransform() {
+    if (!cropState) return;
+    const { scale, offsetX, offsetY } = cropState;
+    cropImage.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+  }
+
+  // ── Open crop modal with image ──
+  function openCrop(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      cropImage.onload = () => {
+        const stageRect = cropStage.getBoundingClientRect();
+        const iw = cropImage.naturalWidth;
+        const ih = cropImage.naturalHeight;
+        const containScale = Math.min(stageRect.width / iw, stageRect.height / ih);
+        const dispW = iw * containScale;
+        const dispH = ih * containScale;
+        cropState = {
+          scale: 1,
+          offsetX: (stageRect.width - dispW) / 2 / containScale,
+          offsetY: (stageRect.height - dispH) / 2 / containScale,
+          baseScale: containScale,
+          imgWidth: iw,
+          imgHeight: ih,
+          stageW: stageRect.width,
+          stageH: stageRect.height,
+          naturalW: iw,
+          naturalH: ih,
+        };
+        applyCropTransform();
+      };
+      cropImage.src = e.target.result;
+      cropModal.style.display = "flex";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ══ DRAG TO PAN ══
+  let isDragging = false;
+  let dragStart = { x: 0, y: 0 };
+  let dragOrig = { x: 0, y: 0 };
+
+  cropStage.addEventListener("pointerdown", (e) => {
+    if (!cropState || e.button !== 0) return;
+    isDragging = true;
+    cropStage.setPointerCapture(e.pointerId);
+    dragStart = { x: e.clientX, y: e.clientY };
+    dragOrig = { x: cropState.offsetX, y: cropState.offsetY };
+  });
+
+  cropStage.addEventListener("pointermove", (e) => {
+    if (!isDragging || !cropState) return;
+    const dx = (e.clientX - dragStart.x) / cropState.baseScale;
+    const dy = (e.clientY - dragStart.y) / cropState.baseScale;
+    cropState.offsetX = dragOrig.x + dx;
+    cropState.offsetY = dragOrig.y + dy;
+    applyCropTransform();
+  });
+
+  cropStage.addEventListener("pointerup", () => { isDragging = false; });
+  cropStage.addEventListener("pointercancel", () => { isDragging = false; });
+
+  // ══ ZOOM WITH WHEEL ══
+  cropStage.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    if (!cropState) return;
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    cropState.scale = Math.max(0.3, Math.min(5, cropState.scale + delta));
+    applyCropTransform();
+  }, { passive: false });
+
+  // ══ FILE SELECTED ══
   dastharInput?.addEventListener("change", () => {
     const file = dastharInput.files?.[0];
-    if (!file) { dastharPreview.innerHTML = ""; state.dastharFile = null; return; }
+    if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       dastharPreview.innerHTML = '<span style="color:var(--color-error);font-size:0.8rem">File too large. Max 5MB.</span>';
       dastharInput.value = "";
-      state.dastharFile = null;
       return;
     }
-    state.dastharFile = file;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      dastharPreview.innerHTML = `<img src="${e.target.result}" class="dasthar-preview-img" />`;
-    };
-    reader.readAsDataURL(file);
+    openCrop(file);
+  });
+
+  // ══ CANCEL ══
+  document.getElementById("crop-cancel")?.addEventListener("click", () => {
+    closeCrop();
+    dastharInput.value = "";
+  });
+
+  // ══ CONFIRM CROP ══
+  document.getElementById("crop-confirm")?.addEventListener("click", () => {
+    if (!cropState) return;
+
+    const { baseScale, naturalW, naturalH, scale, offsetX, offsetY } = cropState;
+    const stageRect = cropStage.getBoundingClientRect();
+    const circleR = Math.min(stageRect.width, stageRect.height) * 0.45;
+
+    // Image displayed size
+    const dispW = stageRect.width;
+    const dispH = stageRect.height;
+
+    // Scale factor from stage coords to natural image coords
+    const scaleFactor = naturalW * baseScale / dispW;
+
+    // Circle center in stage coords
+    const cx = stageRect.width / 2;
+    const cy = stageRect.height / 2;
+
+    // Circle center in image coords (after transforms)
+    const imgCx = ((cx - dispW / 2) / baseScale - offsetX) / scale;
+    const imgCy = ((cy - dispH / 2) / baseScale - offsetY) / scale;
+    const r = circleR / (baseScale * scale);
+
+    // Render
+    const outSize = Math.round(circleR * 2 * (naturalW / dispW));
+    const finalSize = Math.min(outSize, 800);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = finalSize;
+    canvas.height = finalSize;
+    const ctx = canvas.getContext("2d");
+
+    // Circular clip
+    ctx.beginPath();
+    ctx.arc(finalSize / 2, finalSize / 2, finalSize / 2, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+
+    // Draw the visible crop
+    const srcR = r * scale * baseScale;
+    const srcCx = imgCx * scale * baseScale + offsetX * baseScale + dispW / 2;
+    const srcCy = imgCy * scale * baseScale + offsetY * baseScale + dispH / 2;
+
+    ctx.drawImage(
+      cropImage,
+      srcCx - srcR, srcCy - srcR, srcR * 2, srcR * 2,
+      0, 0, finalSize, finalSize
+    );
+
+    canvas.toBlob((blob) => {
+      const croppedFile = new File([blob], "dasthar.png", { type: "image/png" });
+      state.dastharFile = croppedFile;
+
+      // Show circular preview
+      const previewUrl = URL.createObjectURL(blob);
+      dastharPreview.innerHTML = `<img src="${previewUrl}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;box-shadow:var(--shadow-extruded-sm)" />`;
+
+      closeCrop();
+    }, "image/png");
   });
 
   // ── Final Submit ──
