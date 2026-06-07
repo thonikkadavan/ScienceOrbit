@@ -11,15 +11,15 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         <!-- Progress Bar -->
         <div class="progress-wrap">
           <div class="progress-steps">
-            <span class="progress-step" data-step="1">Identity</span>
+            <span class="progress-step" data-step="1"></span>
             <span class="progress-step-sep"></span>
-            <span class="progress-step" data-step="2">Password</span>
+            <span class="progress-step" data-step="2"></span>
             <span class="progress-step-sep"></span>
-            <span class="progress-step" data-step="3">Placement</span>
+            <span class="progress-step" data-step="3"></span>
             <span class="progress-step-sep"></span>
-            <span class="progress-step" data-step="4">Vetting</span>
+            <span class="progress-step" data-step="4"></span>
             <span class="progress-step-sep"></span>
-            <span class="progress-step" data-step="5">Photo</span>
+            <span class="progress-step" data-step="5"></span>
           </div>
           <div class="progress-bar-track">
             <div class="progress-bar-fill" id="progress-fill"></div>
@@ -88,14 +88,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             <div class="form-group" id="course-group" style="display:none">
               <label for="course-name">Course / Subject</label>
               <input type="text" id="course-name" placeholder="e.g. BSc Physics, MA History, PhD CS" />
-            </div>
-            <div class="form-group">
-              <label>Current Dars System</label>
-              <div class="toggle-row">
-                <button type="button" class="toggle-btn active" data-value="Online" id="dars-online">Online</button>
-                <button type="button" class="toggle-btn" data-value="Offline" id="dars-offline">Offline</button>
-              </div>
-              <input type="hidden" id="dars-system" value="Online" />
             </div>
             <div class="step-actions">
               <button type="button" class="btn-neu btn-prev" data-prev="2">← Back</button>
@@ -176,6 +168,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     background: var(--color-surface-container-low);
     border-radius: var(--radius-lg);
     padding: 1.5rem;
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
     box-shadow: var(--shadow-extruded);
   }
   .auth-card h1 {
@@ -183,7 +178,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     font-size: 1.5rem;
     margin-bottom: 0;
   }
-  .auth-form { display: flex; flex-direction: column; }
+  .auth-form { display: flex; flex-direction: column; flex: 1; }
 
   /* Progress Bar */
   .progress-wrap { margin-bottom: 1rem; }
@@ -197,7 +192,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .progress-label { font-size: 11px; color: var(--color-on-surface-variant); text-align: right; }
 
   /* Step Panels */
-  .step-panel { animation: slideIn 0.3s ease; }
+  .step-panel { animation: slideIn 0.3s ease; display: flex; flex-direction: column; flex: 1; }
+  .step-panel .form-group:last-of-type { margin-bottom: 0; }
+  .step-panel .step-actions { margin-top: auto; }
   @keyframes slideIn {
     from { opacity: 0; transform: translateX(20px); }
     to { opacity: 1; transform: translateX(0); }
@@ -222,12 +219,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   }
   .form-group input::placeholder { color: var(--color-outline); }
   .form-group select { cursor: pointer; appearance: auto; }
-
-  /* Toggle Row */
-  .toggle-row { display: flex; gap: 0; border-radius: var(--radius-default); overflow: hidden; box-shadow: var(--shadow-recessed); }
-  .toggle-btn { flex: 1; padding: 0.5rem 1rem; border: none; background: transparent; font-family: var(--font-label); font-size: 13px; font-weight: 600; color: var(--color-on-surface-variant); cursor: pointer; transition: all 0.15s; }
-  .toggle-btn.active { box-shadow: var(--shadow-extruded-sm); color: var(--color-primary); background: var(--color-surface-container-low); }
-  .toggle-btn:hover:not(.active) { color: var(--color-on-surface); }
 
   /* Step Actions */
   .step-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
@@ -297,7 +288,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     academicTier: "",
     campusName: "",
     courseName: "",
-    darsSystem: "Online",
     achievements: "",
     jobTitle: "",
     organisation: "",
@@ -352,7 +342,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         state.academicTier = document.getElementById("academic-tier").value;
         state.campusName = document.getElementById("tier-campus").value;
         state.courseName = document.getElementById("course-name").value.trim();
-        state.darsSystem = document.getElementById("dars-system").value;
         break;
       case 4:
         state.achievements = document.getElementById("achievements").value.trim();
@@ -383,11 +372,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           document.getElementById("tier-campus").value = state.campusName;
         }
         document.getElementById("course-name").value = state.courseName;
-        document.getElementById("dars-system").value = state.darsSystem;
-        // Restore toggle
-        document.querySelectorAll(".toggle-btn").forEach((b) => {
-          b.classList.toggle("active", b.dataset.value === state.darsSystem);
-        });
         break;
       case 4:
         document.getElementById("achievements").value = state.achievements;
@@ -502,15 +486,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     }
   });
 
-  // ── Dars System Toggle ──
-  document.querySelectorAll(".toggle-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".toggle-btn").forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      document.getElementById("dars-system").value = btn.dataset.value;
-    });
-  });
-
   // ── Dasthar Upload & Preview ──
   const dastharInput = document.getElementById("dasthar");
   const dastharPreview = document.getElementById("dasthar-preview");
@@ -591,7 +566,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             phone: state.phone,
             academic_tier: state.academicTier,
             course_name: state.courseName || "",
-            dars_system: state.darsSystem,
           },
         },
       });
@@ -609,7 +583,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         const updates = {
           academic_tier: state.academicTier,
           course_name: state.courseName || null,
-          dars_system: state.darsSystem,
           achievements: state.achievements || null,
           job_title: state.jobTitle || null,
           organisation: state.organisation || null,
