@@ -125,8 +125,13 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       const userId = signUpData?.user?.id;
       if (!userId) throw new Error("Sign-up succeeded but no user ID returned.");
 
-      // Upload dasthar photo
-      if (dastharFile) {
+      // Establish session if available (auto-confirm on)
+      if (signUpData.session) {
+        await supabase.auth.setSession(signUpData.session);
+      }
+
+      // Upload dasthar photo (only possible if session exists)
+      if (dastharFile && signUpData.session) {
         const ext = dastharFile.name.split(".").pop() || "jpg";
         const filePath = `${userId}/dasthar.${ext}`;
         const { error: uploadErr } = await supabase.storage
@@ -134,7 +139,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           .upload(filePath, dastharFile, { upsert: true, contentType: dastharFile.type });
         if (uploadErr) throw uploadErr;
 
-        // Update profile with dasthar URL only
         const { error: updateErr } = await supabase
           .from("profiles")
           .update({ dasthar_url: filePath })
