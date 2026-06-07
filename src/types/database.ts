@@ -38,6 +38,7 @@ export type Database = {
           campus_id: string | null
           course_name: string
           created_at: string | null
+          dars_system: string
           dasthar_url: string
           display_name: string
           deploy_url: string
@@ -71,6 +72,7 @@ export type Database = {
           campus_id?: string | null
           course_name?: string
           created_at?: string | null
+          dars_system?: string
           dasthar_url?: string
           display_name?: string
           deploy_url?: string
@@ -104,6 +106,7 @@ export type Database = {
           campus_id?: string | null
           course_name?: string
           created_at?: string | null
+          dars_system?: string
           dasthar_url?: string
           display_name?: string
           deploy_url?: string

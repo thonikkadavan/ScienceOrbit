@@ -7,73 +7,147 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     <div class="auth-card">
       <div class="auth-card-inner">
         <h1>Create Account</h1>
-        <p class="auth-subtitle">Join Science Orbit</p>
-        <form id="register-form" class="auth-form">
-          <div class="form-group">
-            <label for="username">Username</label>
-            <input
-              type="text"
-              id="username"
-              required
-              placeholder="your-username"
-              title="Letters, numbers, hyphens, and underscores only"
-            />
+        <p class="auth-subtitle">Join Science Orbit — Madeenathunnoor Community</p>
+
+        <!-- Progress Bar -->
+        <div class="progress-wrap">
+          <div class="progress-steps">
+            <span class="progress-step" data-step="1">Identity</span>
+            <span class="progress-step-sep"></span>
+            <span class="progress-step" data-step="2">Placement</span>
+            <span class="progress-step-sep"></span>
+            <span class="progress-step" data-step="3">Vetting</span>
+            <span class="progress-step-sep"></span>
+            <span class="progress-step" data-step="4">Photo</span>
           </div>
-          <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" required placeholder="you@example.com" />
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progress-fill"></div>
           </div>
-          <div class="form-group">
-            <label for="full-name">Full Name</label>
-            <input type="text" id="full-name" required placeholder="Enter your full legal name" />
+          <div class="progress-label" id="progress-label">Step 1 of 4</div>
+        </div>
+
+        <form id="register-form" class="auth-form" novalidate>
+
+          <!-- ===== STEP 1: IDENTITY & BIOMETRICS ===== -->
+          <div class="step-panel" data-step="1">
+            <h2 class="step-title"><span class="material-symbols-outlined">badge</span> Identity &amp; Biometrics</h2>
+            <p class="step-desc">Who are you? Let us know your basic details.</p>
+            <div class="form-group">
+              <label for="username">Username</label>
+              <input type="text" id="username" required placeholder="your-username" title="Letters, numbers, hyphens, and underscores only" />
+            </div>
+            <div class="form-group">
+              <label for="full-name">Full Name</label>
+              <input type="text" id="full-name" required placeholder="Enter your full legal name" />
+            </div>
+            <div class="form-group">
+              <label for="father-name">Father's Name</label>
+              <input type="text" id="father-name" required placeholder="Enter your father's name" />
+            </div>
+            <div class="form-group">
+              <label for="email">Email ID</label>
+              <input type="email" id="email" required placeholder="you@example.com" />
+            </div>
+            <div class="form-group">
+              <label for="phone">Phone Number</label>
+              <input type="tel" id="phone" required placeholder="Enter your phone number" />
+            </div>
+            <div class="form-group">
+              <label for="password">Password</label>
+              <input type="password" id="password" required minlength="6" placeholder="At least 6 characters" />
+            </div>
+            <div class="step-actions">
+              <button type="button" class="btn-neu btn-next" data-next="2">Next Step →</button>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="father-name">Father's Name</label>
-            <input type="text" id="father-name" required placeholder="Enter your father's name" />
+
+          <!-- ===== STEP 2: INSTITUTIONAL PLACEMENT ===== -->
+          <div class="step-panel" data-step="2" style="display:none">
+            <h2 class="step-title"><span class="material-symbols-outlined">account_balance</span> Institutional Placement</h2>
+            <p class="step-desc">Where do you study? Select your academic tier.</p>
+            <div class="form-group">
+              <label for="academic-tier">Academic Tier</label>
+              <select id="academic-tier" required>
+                <option value="">— Select your tier —</option>
+                <option value="JUNIOR">Junior</option>
+                <option value="FOUNDATION">Foundation</option>
+                <option value="UG">UG (Undergraduate)</option>
+                <option value="PG">PG (Postgraduate)</option>
+                <option value="PHD">PhD (Doctorate)</option>
+              </select>
+            </div>
+            <div class="form-group" id="tier-campus-group" style="display:none">
+              <label for="tier-campus">Campus</label>
+              <select id="tier-campus" required></select>
+            </div>
+            <div class="form-group" id="course-group" style="display:none">
+              <label for="course-name">Course / Subject</label>
+              <input type="text" id="course-name" placeholder="e.g. BSc Physics, MA History, PhD CS" />
+            </div>
+            <div class="form-group">
+              <label>Current Dars System</label>
+              <div class="toggle-row">
+                <button type="button" class="toggle-btn active" data-value="Online" id="dars-online">Online</button>
+                <button type="button" class="toggle-btn" data-value="Offline" id="dars-offline">Offline</button>
+              </div>
+              <input type="hidden" id="dars-system" value="Online" />
+            </div>
+            <div class="step-actions">
+              <button type="button" class="btn-neu btn-prev" data-prev="1">← Back</button>
+              <button type="button" class="btn-neu btn-next" data-next="3">Next Step →</button>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="phone">Phone No</label>
-            <input type="tel" id="phone" required placeholder="Enter your phone number" title="Phone number (digits, +, -, spaces, parentheses only)" />
+
+          <!-- ===== STEP 3: PROFESSIONAL & ACADEMIC VETTING ===== -->
+          <div class="step-panel" data-step="3" style="display:none">
+            <h2 class="step-title"><span class="material-symbols-outlined">verified</span> Professional &amp; Academic Vetting</h2>
+            <p class="step-desc">Optional. Add your achievements and employment details, or skip.</p>
+            <div class="form-group">
+              <label for="achievements">Achievements (credential URL)</label>
+              <input type="url" id="achievements" placeholder="https://example.com/credential" />
+              <small style="color:var(--color-on-surface-variant);font-size:0.75rem">Link to a certificate, award, or credential you hold.</small>
+            </div>
+            <div class="form-group">
+              <label for="job-title">Job Title</label>
+              <input type="text" id="job-title" placeholder="e.g. Research Assistant, Software Engineer" />
+            </div>
+            <div class="form-group">
+              <label for="organisation">Organisation</label>
+              <input type="text" id="organisation" placeholder="e.g. University of Calicut, Google" />
+            </div>
+            <div class="step-actions">
+              <button type="button" class="btn-neu btn-prev" data-prev="2">← Back</button>
+              <button type="button" class="btn-neu btn-skip" data-next="4">Skip</button>
+              <button type="button" class="btn-neu btn-next" data-next="4">Next Step →</button>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="academic-tier">Academic Tier</label>
-            <select id="academic-tier" required>
-              <option value="">— Select your tier —</option>
-              <option value="JUNIOR">Junior</option>
-              <option value="FOUNDATION">Foundation</option>
-              <option value="UG">UG (Undergraduate)</option>
-              <option value="PG">PG (Postgraduate)</option>
-              <option value="PHD">PhD (Doctorate)</option>
-            </select>
+
+          <!-- ===== STEP 4: VERIFICATION & PHOTO ===== -->
+          <div class="step-panel" data-step="4" style="display:none">
+            <h2 class="step-title"><span class="material-symbols-outlined">photo_camera</span> Verification &amp; Photo</h2>
+            <p class="step-desc">Upload your Dasthar photo and submit for approval.</p>
+            <div class="form-group">
+              <label for="dasthar">Photo (Dasthar)</label>
+              <div class="dasthar-upload-area" id="dasthar-upload-area">
+                <input type="file" id="dasthar" accept="image/jpeg,image/png,image/webp" required />
+                <div class="dasthar-upload-hint">
+                  <span class="material-symbols-outlined" style="font-size:32px">add_photo_alternate</span>
+                  <span>Click to upload your passport-style photo</span>
+                </div>
+              </div>
+              <div id="dasthar-preview" class="dasthar-preview"></div>
+              <small style="color:var(--color-on-surface-variant);font-size:0.75rem">JPEG, PNG, or WebP. Max 5MB.</small>
+            </div>
+            <p id="error-msg" class="error-msg"></p>
+            <div class="step-actions">
+              <button type="button" class="btn-neu btn-prev" data-prev="3">← Back</button>
+              <button type="submit" class="btn-neu btn-submit" id="submit-btn">
+                <span class="material-symbols-outlined" style="font-size:18px">how_to_reg</span>
+                Create Account &amp; Submit
+              </button>
+            </div>
           </div>
-          <div class="form-group" id="tier-campus-group" style="display:none">
-            <label for="tier-campus">Campus</label>
-            <select id="tier-campus" required></select>
-          </div>
-          <div class="form-group" id="course-group" style="display:none">
-            <label for="course-name">Course Name / Subject</label>
-            <input type="text" id="course-name" placeholder="e.g. BSc Physics, MA History, PhD Computer Science" />
-          </div>
-          <div class="form-group">
-            <label for="dasthar">Photo (Dasthar)</label>
-            <input type="file" id="dasthar" accept="image/jpeg,image/png,image/webp" required />
-            <div id="dasthar-preview" class="dasthar-preview"></div>
-            <small style="color:var(--color-on-surface-variant);font-size:0.75rem">JPEG, PNG, or WebP. Max 5MB. Passport-style photo recommended.</small>
-          </div>
-          <div class="form-group">
-            <label for="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              required
-              minlength="6"
-              placeholder="At least 6 characters"
-            />
-          </div>
-          <p id="error-msg" class="error-msg"></p>
-          <button type="submit" class="btn-primary" id="submit-btn">
-            Create Account
-          </button>
+
         </form>
         <p class="auth-footer">
           Already have an account? <a href="/login">Sign in</a>
@@ -83,24 +157,374 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   </div>
 </BaseLayout>
 
+<style is:global>
+  .auth-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    background: var(--color-neu-base);
+  }
+  .auth-card {
+    width: 100%;
+    max-width: 480px;
+    padding: 2px;
+  }
+  .auth-card-inner {
+    background: var(--color-surface-container-low);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--shadow-extruded);
+  }
+  .auth-card h1 {
+    font-family: var(--font-headline);
+    font-size: 1.65rem;
+    margin-bottom: 0.1rem;
+  }
+  .auth-subtitle {
+    color: var(--color-on-surface-variant);
+    margin-bottom: 1.25rem;
+    font-size: 0.85rem;
+  }
+  .auth-form { display: flex; flex-direction: column; }
+
+  /* Progress Bar */
+  .progress-wrap { margin-bottom: 1.5rem; }
+  .progress-steps { display: flex; justify-content: space-between; margin-bottom: 0.4rem; }
+  .progress-step { font-size: 11px; font-weight: 600; color: var(--color-on-surface-variant); letter-spacing: 0.03em; transition: color 0.2s; }
+  .progress-step.active { color: var(--color-primary); }
+  .progress-step.done { color: #16a34a; }
+  .progress-step-sep { flex:1; }
+  .progress-bar-track { height: 4px; background: var(--color-neu-base); border-radius: 4px; box-shadow: var(--shadow-recessed); overflow:hidden; margin-bottom: 0.3rem; }
+  .progress-bar-fill { height: 100%; width: 0%; background: var(--color-primary); border-radius: 4px; transition: width 0.4s ease; }
+  .progress-label { font-size: 11px; color: var(--color-on-surface-variant); text-align: right; }
+
+  /* Step Panels */
+  .step-panel { animation: slideIn 0.3s ease; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .step-title { display: flex; align-items: center; gap: 0.4rem; font-family: var(--font-headline); font-size: 1.1rem; margin-bottom: 0.15rem; }
+  .step-title .material-symbols-outlined { font-size: 22px; color: var(--color-primary); }
+  .step-desc { font-size: 0.8rem; color: var(--color-on-surface-variant); margin-bottom: 1.25rem; }
+
+  /* Form Fields */
+  .form-group { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1rem; }
+  .form-group label { font-family: var(--font-label); font-size: 0.82rem; font-weight: 600; color: var(--color-on-surface-variant); }
+  .form-group input, .form-group select {
+    padding: 0.7rem 1rem;
+    border: none;
+    border-radius: var(--radius-default);
+    font-size: 0.92rem;
+    outline: none;
+    background: var(--color-neu-base);
+    box-shadow: var(--shadow-recessed);
+    transition: box-shadow 0.15s;
+    font-family: inherit;
+  }
+  .form-group input:focus, .form-group select:focus {
+    box-shadow: var(--shadow-recessed), 0 0 0 2px var(--color-primary-container);
+  }
+  .form-group input::placeholder { color: var(--color-outline); }
+  .form-group select { cursor: pointer; appearance: auto; }
+
+  /* Toggle Row */
+  .toggle-row { display: flex; gap: 0; border-radius: var(--radius-default); overflow: hidden; box-shadow: var(--shadow-recessed); }
+  .toggle-btn { flex: 1; padding: 0.6rem 1rem; border: none; background: transparent; font-family: var(--font-label); font-size: 13px; font-weight: 600; color: var(--color-on-surface-variant); cursor: pointer; transition: all 0.15s; }
+  .toggle-btn.active { box-shadow: var(--shadow-extruded-sm); color: var(--color-primary); background: var(--color-surface-container-low); }
+  .toggle-btn:hover:not(.active) { color: var(--color-on-surface); }
+
+  /* Step Actions */
+  .step-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+  .btn-neu {
+    padding: 0.7rem 1.25rem;
+    border: none;
+    border-radius: var(--radius-default);
+    font-family: var(--font-label);
+    font-weight: 600;
+    font-size: 0.92rem;
+    box-shadow: var(--shadow-extruded);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    letter-spacing: 0.02em;
+    background: var(--color-neu-base);
+    color: var(--color-on-surface);
+  }
+  .btn-neu:hover:not(:disabled) { box-shadow: var(--shadow-extruded-hover); }
+  .btn-neu:active:not(:disabled) { box-shadow: var(--shadow-recessed); }
+  .btn-neu:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-next { margin-left: auto; color: var(--color-primary); }
+  .btn-submit { margin-left: auto; color: var(--color-primary); }
+  .btn-skip { color: var(--color-on-surface-variant); font-size: 0.85rem; }
+  .btn-prev { color: var(--color-on-surface-variant); }
+
+  .error-msg { color: var(--color-error); font-size: 0.85rem; min-height: 1.25rem; }
+
+  /* Dasthar Upload */
+  .dasthar-upload-area {
+    position: relative;
+    border: 2px dashed var(--color-outline);
+    border-radius: var(--radius-default);
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    background: var(--color-neu-base);
+  }
+  .dasthar-upload-area:hover { border-color: var(--color-primary); }
+  .dasthar-upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .dasthar-upload-hint { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; color: var(--color-outline); font-size: 0.82rem; }
+  .dasthar-preview { margin-top: 0.5rem; display: flex; justify-content: center; }
+  .dasthar-preview-img { width: 120px; height: 144px; object-fit: cover; border-radius: var(--radius-default); box-shadow: var(--shadow-extruded-sm); }
+
+  .auth-footer { margin-top: 1.5rem; text-align: center; font-size: 0.85rem; color: var(--color-on-surface-variant); }
+</style>
+
 <script>
   import { createBrowserClient } from "@supabase/ssr";
 
-  // Hardcoded campus lookup arrays per tier
+  // ── Hardcoded campus arrays ──
   const JUNIOR_CAMPUSES = ["Baithul Izza", "Hasaniyya", "Hasanul Basari", "Dunnurain", "Al Munavvara"];
   const FOUNDATION_CAMPUSES = ["Baithul Izza", "Isra", "Qadariyya", "Tharbiyath", "Miraj"];
 
-  // Dasthar photo preview
+  // ── State ──
+  const state = {
+    step: 1,
+    username: "",
+    fullName: "",
+    fatherName: "",
+    email: "",
+    phone: "",
+    password: "",
+    academicTier: "",
+    campusName: "",
+    courseName: "",
+    darsSystem: "Online",
+    achievements: "",
+    jobTitle: "",
+    organisation: "",
+    dastharFile: null,
+  };
+
+  // ── DOM refs ──
+  const form = document.getElementById("register-form");
+  const errorMsg = document.getElementById("error-msg");
+  const submitBtn = document.getElementById("submit-btn");
+
+  // ── Progress bar update ──
+  function updateProgress(step) {
+    document.getElementById("progress-fill").style.width = `${(step / 4) * 100}%`;
+    document.getElementById("progress-label").textContent = `Step ${step} of 4`;
+    document.querySelectorAll(".progress-step").forEach((el) => {
+      const s = parseInt(el.dataset.step);
+      el.classList.toggle("active", s === step);
+      el.classList.toggle("done", s < step);
+    });
+  }
+
+  // ── Show step ──
+  function showStep(step) {
+    // Save current step data before switching
+    saveCurrentStep(state.step);
+
+    document.querySelectorAll(".step-panel").forEach((el) => {
+      el.style.display = el.dataset.step == step ? "block" : "none";
+    });
+    state.step = step;
+    updateProgress(step);
+    errorMsg.textContent = "";
+    // Restore step data
+    restoreStep(step);
+  }
+
+  // ── Save form values to state ──
+  function saveCurrentStep(step) {
+    switch (step) {
+      case 1:
+        state.username = document.getElementById("username").value.trim();
+        state.fullName = document.getElementById("full-name").value.trim();
+        state.fatherName = document.getElementById("father-name").value.trim();
+        state.email = document.getElementById("email").value.trim();
+        state.phone = document.getElementById("phone").value.trim();
+        state.password = document.getElementById("password").value;
+        break;
+      case 2:
+        state.academicTier = document.getElementById("academic-tier").value;
+        state.campusName = document.getElementById("tier-campus").value;
+        state.courseName = document.getElementById("course-name").value.trim();
+        state.darsSystem = document.getElementById("dars-system").value;
+        break;
+      case 3:
+        state.achievements = document.getElementById("achievements").value.trim();
+        state.jobTitle = document.getElementById("job-title").value.trim();
+        state.organisation = document.getElementById("organisation").value.trim();
+        break;
+    }
+  }
+
+  // ── Restore form values from state ──
+  function restoreStep(step) {
+    switch (step) {
+      case 1:
+        document.getElementById("username").value = state.username;
+        document.getElementById("full-name").value = state.fullName;
+        document.getElementById("father-name").value = state.fatherName;
+        document.getElementById("email").value = state.email;
+        document.getElementById("phone").value = state.phone;
+        document.getElementById("password").value = state.password;
+        break;
+      case 2:
+        document.getElementById("academic-tier").value = state.academicTier;
+        // Trigger tier change to populate campus
+        document.getElementById("academic-tier").dispatchEvent(new Event("change"));
+        if (state.campusName) {
+          document.getElementById("tier-campus").value = state.campusName;
+        }
+        document.getElementById("course-name").value = state.courseName;
+        document.getElementById("dars-system").value = state.darsSystem;
+        // Restore toggle
+        document.querySelectorAll(".toggle-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.value === state.darsSystem);
+        });
+        break;
+      case 3:
+        document.getElementById("achievements").value = state.achievements;
+        document.getElementById("job-title").value = state.jobTitle;
+        document.getElementById("organisation").value = state.organisation;
+        break;
+      case 4:
+        // Dasthar preview is restored from file — show hint if no file
+        if (!state.dastharFile) {
+          document.getElementById("dasthar-preview").innerHTML = "";
+        }
+        break;
+    }
+  }
+
+  // ── Navigation: Next / Back / Skip ──
+  document.querySelectorAll(".btn-next").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const next = parseInt(btn.dataset.next);
+      if (validateStep(state.step)) {
+        showStep(next);
+      }
+    });
+  });
+
+  document.querySelectorAll(".btn-prev").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      showStep(parseInt(btn.dataset.prev));
+    });
+  });
+
+  document.querySelectorAll(".btn-skip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      showStep(parseInt(btn.dataset.next));
+    });
+  });
+
+  // ── Validation per step ──
+  function validateStep(step) {
+    errorMsg.textContent = "";
+    switch (step) {
+      case 1: {
+        const u = document.getElementById("username").value.trim();
+        const n = document.getElementById("full-name").value.trim();
+        const f = document.getElementById("father-name").value.trim();
+        const e = document.getElementById("email").value.trim();
+        const p = document.getElementById("phone").value.trim();
+        const pw = document.getElementById("password").value;
+        if (!/^[a-zA-Z0-9_-]+$/.test(u)) { errorMsg.textContent = "Username: letters, numbers, hyphens, underscores only."; return false; }
+        if (n.length < 2) { errorMsg.textContent = "Please enter your full legal name."; return false; }
+        if (!f) { errorMsg.textContent = "Please enter your father's name."; return false; }
+        if (!e) { errorMsg.textContent = "Please enter your email."; return false; }
+        if (!p) { errorMsg.textContent = "Please enter your phone number."; return false; }
+        if (pw.length < 6) { errorMsg.textContent = "Password must be at least 6 characters."; return false; }
+        return true;
+      }
+      case 2: {
+        const tier = document.getElementById("academic-tier").value;
+        if (!tier) { errorMsg.textContent = "Please select your academic tier."; return false; }
+        if (tier === "JUNIOR" || tier === "FOUNDATION") {
+          if (!document.getElementById("tier-campus").value) { errorMsg.textContent = "Please select your campus."; return false; }
+        } else if (["UG","PG","PHD"].includes(tier)) {
+          if (!document.getElementById("course-name").value.trim()) { errorMsg.textContent = "Please enter your course / subject."; return false; }
+        }
+        return true;
+      }
+      case 3:
+        return true; // optional
+      case 4: {
+        if (!state.dastharFile && !document.getElementById("dasthar").files?.[0]) {
+          errorMsg.textContent = "Please upload your Dasthar photo.";
+          return false;
+        }
+        return true;
+      }
+      default:
+        return true;
+    }
+  }
+
+  // ── Academic tier → conditional campus/course ──
+  document.getElementById("academic-tier")?.addEventListener("change", () => {
+    const tier = document.getElementById("academic-tier").value;
+    const campusGroup = document.getElementById("tier-campus-group");
+    const campusSelect = document.getElementById("tier-campus");
+    const courseGroup = document.getElementById("course-group");
+
+    campusGroup.style.display = "none";
+    courseGroup.style.display = "none";
+    campusSelect.innerHTML = "";
+
+    if (tier === "JUNIOR") {
+      JUNIOR_CAMPUSES.forEach((c) => {
+        const opt = document.createElement("option"); opt.value = c; opt.textContent = c;
+        campusSelect.appendChild(opt);
+      });
+      campusSelect.required = true;
+      campusGroup.style.display = "block";
+    } else if (tier === "FOUNDATION") {
+      FOUNDATION_CAMPUSES.forEach((c) => {
+        const opt = document.createElement("option"); opt.value = c; opt.textContent = c;
+        campusSelect.appendChild(opt);
+      });
+      campusSelect.required = true;
+      campusGroup.style.display = "block";
+    } else if (["UG","PG","PHD"].includes(tier)) {
+      document.getElementById("course-name").required = true;
+      courseGroup.style.display = "block";
+    }
+  });
+
+  // ── Dars System Toggle ──
+  document.querySelectorAll(".toggle-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".toggle-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("dars-system").value = btn.dataset.value;
+    });
+  });
+
+  // ── Dasthar Upload & Preview ──
   const dastharInput = document.getElementById("dasthar");
   const dastharPreview = document.getElementById("dasthar-preview");
+
   dastharInput?.addEventListener("change", () => {
     const file = dastharInput.files?.[0];
-    if (!file) { dastharPreview.innerHTML = ""; return; }
+    if (!file) { dastharPreview.innerHTML = ""; state.dastharFile = null; return; }
     if (file.size > 5 * 1024 * 1024) {
       dastharPreview.innerHTML = '<span style="color:var(--color-error);font-size:0.8rem">File too large. Max 5MB.</span>';
       dastharInput.value = "";
+      state.dastharFile = null;
       return;
     }
+    state.dastharFile = file;
     const reader = new FileReader();
     reader.onload = (e) => {
       dastharPreview.innerHTML = `<img src="${e.target.result}" class="dasthar-preview-img" />`;
@@ -108,86 +532,37 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     reader.readAsDataURL(file);
   });
 
-  // Academic tier → conditional campus/course fields
-  const tierSelect = document.getElementById("academic-tier");
-  const tierCampusGroup = document.getElementById("tier-campus-group");
-  const tierCampusSelect = document.getElementById("tier-campus");
-  const courseGroup = document.getElementById("course-group");
-
-  tierSelect?.addEventListener("change", () => {
-    const tier = tierSelect.value;
-    tierCampusGroup.style.display = "none";
-    courseGroup.style.display = "none";
-    tierCampusSelect.innerHTML = "";
-
-    if (tier === "JUNIOR") {
-      JUNIOR_CAMPUSES.forEach((c) => {
-        const opt = document.createElement("option");
-        opt.value = c; opt.textContent = c;
-        tierCampusSelect.appendChild(opt);
-      });
-      tierCampusSelect.required = true;
-      tierCampusGroup.style.display = "block";
-    } else if (tier === "FOUNDATION") {
-      FOUNDATION_CAMPUSES.forEach((c) => {
-        const opt = document.createElement("option");
-        opt.value = c; opt.textContent = c;
-        tierCampusSelect.appendChild(opt);
-      });
-      tierCampusSelect.required = true;
-      tierCampusGroup.style.display = "block";
-    } else if (["UG", "PG", "PHD"].includes(tier)) {
-      document.getElementById("course-name").required = true;
-      courseGroup.style.display = "block";
-    }
-  });
-
-  const form = document.getElementById("register-form");
-  const errorMsg = document.getElementById("error-msg");
-  const submitBtn = document.getElementById("submit-btn");
-
+  // ── Final Submit ──
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
+
+    // Save final step data
+    saveCurrentStep(4);
+
     errorMsg.textContent = "";
     submitBtn.disabled = true;
-    submitBtn.textContent = "Creating account...";
+    submitBtn.innerHTML = "Creating account...";
 
-    const username = document.getElementById("username").value.trim();
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
-    const fullName = document.getElementById("full-name").value.trim();
-    const fatherName = document.getElementById("father-name").value.trim();
-    const phone = document.getElementById("phone").value.trim();
-    const academicTier = document.getElementById("academic-tier").value;
-    const campusName = document.getElementById("tier-campus").value;
-    const courseName = document.getElementById("course-name").value.trim();
-    const dastharFile = dastharInput?.files?.[0];
-
-    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      errorMsg.textContent = "Username: letters, numbers, hyphens, and underscores only.";
+    // Validate all required fields across all steps
+    if (!state.username || !state.email || !state.password || !state.fullName || !state.fatherName || !state.phone) {
+      errorMsg.textContent = "Please complete Step 1 (Identity) first.";
       submitBtn.disabled = false;
-      submitBtn.textContent = "Create Account";
+      submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">how_to_reg</span> Create Account & Submit';
+      showStep(1);
       return;
     }
-
-    if (fullName.length < 2) {
-      errorMsg.textContent = "Please enter your full legal name.";
+    if (!state.academicTier) {
+      errorMsg.textContent = "Please complete Step 2 (Placement) first.";
       submitBtn.disabled = false;
-      submitBtn.textContent = "Create Account";
+      submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">how_to_reg</span> Create Account & Submit';
+      showStep(2);
       return;
     }
-
-    if (!academicTier) {
-      errorMsg.textContent = "Please select your academic tier.";
+    if (!state.dastharFile) {
+      errorMsg.textContent = "Please upload your Dasthar photo in Step 4.";
       submitBtn.disabled = false;
-      submitBtn.textContent = "Create Account";
-      return;
-    }
-
-    if (dastharFile && dastharFile.size > 5 * 1024 * 1024) {
-      errorMsg.textContent = "Photo exceeds 5MB limit.";
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Create Account";
+      submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">how_to_reg</span> Create Account & Submit';
+      showStep(4);
       return;
     }
 
@@ -197,218 +572,75 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         import.meta.env.PUBLIC_SUPABASE_ANON_KEY
       );
 
-      const meta = {
-        username,
-        legal_name: fullName,
-        father_name: fatherName,
-        phone,
-        academic_tier: academicTier,
-        campus_name: campusName || "",
-        course_name: courseName || "",
-      };
-
+      // ── Sign Up ──
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: meta },
+        email: state.email,
+        password: state.password,
+        options: {
+          data: {
+            username: state.username,
+            legal_name: state.fullName,
+            father_name: state.fatherName,
+            phone: state.phone,
+            academic_tier: state.academicTier,
+            course_name: state.courseName || "",
+            dars_system: state.darsSystem,
+          },
+        },
       });
 
       if (signUpError) throw signUpError;
-
       const userId = signUpData?.user?.id;
       if (!userId) throw new Error("Sign-up succeeded but no user ID returned.");
 
-      // Establish session if available (auto-confirm on)
       if (signUpData.session) {
         await supabase.auth.setSession(signUpData.session);
       }
 
-      // Look up campus_id and update profile with academic fields
-      if (signUpData.session && campusName) {
-        const { data: campuses } = await supabase
-          .from("campuses")
-          .select("id")
-          .eq("name", campusName)
-          .single();
-        if (campuses) {
-          await supabase.from("profiles").update({
-            campus_id: campuses.id,
-            academic_tier: academicTier,
-            course_name: courseName || null,
-          }).eq("id", userId);
+      // ── Update profile with campus, achievements, employment ──
+      if (signUpData.session) {
+        const updates = {
+          academic_tier: state.academicTier,
+          course_name: state.courseName || null,
+          dars_system: state.darsSystem,
+          achievements: state.achievements || null,
+          job_title: state.jobTitle || null,
+          organisation: state.organisation || null,
+        };
+
+        // Look up campus_id
+        if (state.campusName) {
+          const { data: campus } = await supabase
+            .from("campuses")
+            .select("id")
+            .eq("name", state.campusName)
+            .single();
+          if (campus) updates.campus_id = campus.id;
         }
-      } else if (signUpData.session && ["UG", "PG", "PHD"].includes(academicTier)) {
-        await supabase.from("profiles").update({
-          academic_tier: academicTier,
-          course_name: courseName || null,
-        }).eq("id", userId);
+
+        await supabase.from("profiles").update(updates).eq("id", userId);
       }
 
-      // Upload dasthar photo (only possible if session exists)
-      if (dastharFile && signUpData.session) {
-        const ext = dastharFile.name.split(".").pop() || "jpg";
+      // ── Upload Dasthar photo ──
+      if (state.dastharFile && signUpData.session) {
+        const ext = state.dastharFile.name.split(".").pop() || "jpg";
         const filePath = `${userId}/dasthar.${ext}`;
         const { error: uploadErr } = await supabase.storage
           .from("dasthar")
-          .upload(filePath, dastharFile, { upsert: true, contentType: dastharFile.type });
+          .upload(filePath, state.dastharFile, { upsert: true, contentType: state.dastharFile.type });
         if (uploadErr) throw uploadErr;
 
-        const { error: updateErr } = await supabase
-          .from("profiles")
-          .update({ dasthar_url: filePath })
-          .eq("id", userId);
-
-        if (updateErr) console.error("Dasthar URL update:", updateErr);
+        await supabase.from("profiles").update({ dasthar_url: filePath }).eq("id", userId);
       }
 
       window.location.href = "/dashboard/feed";
     } catch (err) {
       errorMsg.textContent = err.message || "Registration failed.";
       submitBtn.disabled = false;
-      submitBtn.textContent = "Create Account";
+      submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">how_to_reg</span> Create Account & Submit';
     }
   });
+
+  // ── Init ──
+  updateProgress(1);
 </script>
-
-<style is:global>
-  .auth-page {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 2rem;
-    background: var(--color-neu-base);
-  }
-
-  .auth-card {
-    width: 100%;
-    max-width: 420px;
-    padding: 2px;
-  }
-
-  .auth-card-inner {
-    background: var(--color-surface-container-low);
-    border-radius: var(--radius-lg);
-    padding: 2.5rem;
-    box-shadow: var(--shadow-extruded);
-  }
-
-  .auth-card h1 {
-    font-family: var(--font-headline);
-    font-size: 1.75rem;
-    margin-bottom: 0.25rem;
-  }
-
-  .auth-subtitle {
-    color: var(--color-on-surface-variant);
-    margin-bottom: 1.5rem;
-    font-size: 0.9rem;
-  }
-
-  .auth-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-
-  .form-group label {
-    font-family: var(--font-label);
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--color-on-surface-variant);
-  }
-
-  .form-group input {
-    padding: 0.75rem 1rem;
-    border: none;
-    border-radius: var(--radius-default);
-    font-size: 0.95rem;
-    outline: none;
-    background: var(--color-neu-base);
-    box-shadow: var(--shadow-recessed);
-    transition: box-shadow 0.15s;
-  }
-
-  .form-group input:focus {
-    box-shadow: var(--shadow-recessed), 0 0 0 2px var(--color-primary-container);
-  }
-
-  .form-group input::placeholder {
-    color: var(--color-outline);
-  }
-
-  .form-group select {
-    padding: 0.75rem 1rem;
-    border: none;
-    border-radius: var(--radius-default);
-    font-size: 0.95rem;
-    outline: none;
-    background: var(--color-neu-base);
-    box-shadow: var(--shadow-recessed);
-    transition: box-shadow 0.15s;
-    font-family: inherit;
-    cursor: pointer;
-    appearance: auto;
-  }
-
-  .form-group select:focus {
-    box-shadow: var(--shadow-recessed), 0 0 0 2px var(--color-primary-container);
-  }
-
-  .error-msg {
-    color: var(--color-error);
-    font-size: 0.85rem;
-    min-height: 1.25rem;
-  }
-
-  .btn-primary {
-    background: var(--color-neu-base);
-    color: var(--color-primary);
-    padding: 0.75rem;
-    border: none;
-    border-radius: var(--radius-default);
-    font-family: var(--font-label);
-    font-weight: 600;
-    font-size: 1rem;
-    box-shadow: var(--shadow-extruded);
-    transition: all 0.15s;
-    letter-spacing: 0.02em;
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    box-shadow: var(--shadow-extruded-hover);
-    color: var(--color-primary);
-  }
-
-  .btn-primary:active:not(:disabled) {
-    box-shadow: var(--shadow-recessed);
-  }
-
-  .btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .auth-footer {
-    margin-top: 1.5rem;
-    text-align: center;
-    font-size: 0.875rem;
-    color: var(--color-on-surface-variant);
-  }
-  .dasthar-preview {
-    margin-top: 0.5rem;
-  }
-  .dasthar-preview-img {
-    width: 100px;
-    height: 120px;
-    object-fit: cover;
-    border-radius: var(--radius-default);
-    box-shadow: var(--shadow-extruded-sm);
-  }
-</style>
