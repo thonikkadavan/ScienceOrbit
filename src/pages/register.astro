@@ -319,7 +319,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     saveCurrentStep(state.step);
 
     document.querySelectorAll(".step-panel").forEach((el) => {
-      el.style.display = el.dataset.step == step ? "block" : "none";
+      el.style.display = el.dataset.step == step ? "flex" : "none";
     });
     state.step = step;
     updateProgress(step);
@@ -501,17 +501,17 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         campusSelect.appendChild(opt);
       });
       campusSelect.required = true;
-      campusGroup.style.display = "block";
+      campusGroup.style.display = "flex";
     } else if (tier === "FOUNDATION") {
       FOUNDATION_CAMPUSES.forEach((c) => {
         const opt = document.createElement("option"); opt.value = c; opt.textContent = c;
         campusSelect.appendChild(opt);
       });
       campusSelect.required = true;
-      campusGroup.style.display = "block";
+      campusGroup.style.display = "flex";
     } else if (["UG","PG","PHD"].includes(tier)) {
       document.getElementById("course-name").required = true;
-      courseGroup.style.display = "block";
+      courseGroup.style.display = "flex";
     }
   });
 
