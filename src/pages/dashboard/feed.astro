@@ -304,6 +304,13 @@ function getTimeAgo(dateStr: string | null): string {
     import.meta.env.PUBLIC_SUPABASE_ANON_KEY
   );
 
+  function escapeHtml(str) {
+    if (!str) return "";
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
   // Guest check - if no composer elements, we're viewing as guest
   const isGuest = !document.getElementById("fab-add");
 
@@ -381,8 +388,9 @@ function getTimeAgo(dateStr: string | null): string {
     const achievements = profile.achievements
       ? profile.achievements.split("\n").filter(Boolean)
       : [];
-    const campusName = profile.campuses?.name || "";
-    const displayName = profile.display_name || profile.username;
+    const campusName = escapeHtml(profile.campuses?.name || "");
+    const displayName = escapeHtml(profile.display_name || profile.username);
+    const username = escapeHtml(profile.username);
     const avUrl = avatarUrl(profile.avatar_url);
     const avatarHtml = avUrl
       ? `<img src="${avUrl}" alt="" class="pv-avatar-img" />`
@@ -392,11 +400,11 @@ function getTimeAgo(dateStr: string | null): string {
       <div class="pv-hero">
         <div class="pv-avatar">${avatarHtml}</div>
         <h2 class="pv-name">${displayName}</h2>
-        <span class="pv-username">@${profile.username}</span>
+        <span class="pv-username">@${username}</span>
         ${campusName ? `<div class="pv-campus"><span class="material-symbols-outlined">location_on</span> ${campusName}</div>` : ""}
       </div>
-      ${subs.length ? `<div class="pv-section"><h4 class="pv-section-title">Subjects</h4><div class="pv-chips">${subs.map(s => `<span class="pv-chip">${s}</span>`).join("")}</div></div>` : ""}
-      ${achievements.length ? `<div class="pv-section"><h4 class="pv-section-title">Achievements</h4><ul class="pv-achievements">${achievements.map(a => `<li class="pv-achievement"><span class="material-symbols-outlined pv-achievement-icon">emoji_events</span>${a}</li>`).join("")}</ul></div>` : ""}
+      ${subs.length ? `<div class="pv-section"><h4 class="pv-section-title">Subjects</h4><div class="pv-chips">${subs.map(s => `<span class="pv-chip">${escapeHtml(s)}</span>`).join("")}</div></div>` : ""}
+      ${achievements.length ? `<div class="pv-section"><h4 class="pv-section-title">Achievements</h4><ul class="pv-achievements">${achievements.map(a => `<li class="pv-achievement"><span class="material-symbols-outlined pv-achievement-icon">emoji_events</span>${escapeHtml(a)}</li>`).join("")}</ul></div>` : ""}
       <div class="pv-actions">
         <a href="/dashboard?user=${profile.id}" class="pv-view-btn">View Full Portfolio</a>
       </div>
@@ -455,7 +463,8 @@ function getTimeAgo(dateStr: string | null): string {
       if (profilesRes.data.length) {
         html += `<div class="tsd-group-title">Scholars</div>`;
         html += profilesRes.data.map(p => {
-          const dn = p.display_name || p.username;
+          const dn = escapeHtml(p.display_name || p.username);
+          const un = escapeHtml(p.username);
           const initial = (dn || "?")[0].toUpperCase();
           const avUrl = avatarUrl(p.avatar_url);
           const img = avUrl
@@ -466,8 +475,8 @@ function getTimeAgo(dateStr: string | null): string {
             ${img}
             <div class="tsd-info">
               <span class="tsd-name">${dn}</span>
-              <span class="tsd-meta">@${p.username}</span>
-              ${subs.length ? `<div class="tsd-chips">${subs.map(s => `<span class="tsd-chip">${s}</span>`).join("")}</div>` : ""}
+              <span class="tsd-meta">@${un}</span>
+              ${subs.length ? `<div class="tsd-chips">${subs.map(s => `<span class="tsd-chip">${escapeHtml(s)}</span>`).join("")}</div>` : ""}
             </div>
           </div>`;
         }).join("");
