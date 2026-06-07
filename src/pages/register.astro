@@ -28,6 +28,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         </div>
 
         <form id="register-form" class="auth-form" novalidate>
+          <p id="error-msg" class="error-msg"></p>
 
           <!-- ===== STEP 1 ===== -->
           <div class="step-panel" data-step="1">
@@ -131,7 +132,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <div id="dasthar-preview" class="dasthar-preview"></div>
               <small style="color:var(--color-on-surface-variant);font-size:0.75rem">JPEG, PNG, or WebP. Max 5MB.</small>
             </div>
-            <p id="error-msg" class="error-msg"></p>
             <div class="step-actions">
               <button type="button" class="btn-neu btn-prev" data-prev="4">← Back</button>
               <button type="submit" class="btn-neu btn-submit" id="submit-btn">
@@ -219,6 +219,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   }
   .form-group input::placeholder { color: var(--color-outline); }
   .form-group select { cursor: pointer; appearance: auto; }
+  .field-error input, .field-error select { box-shadow: var(--shadow-recessed), 0 0 0 2px var(--color-error); }
+  .field-error label { color: var(--color-error); }
 
   /* Step Actions */
   .step-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
@@ -247,7 +249,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .btn-skip { color: var(--color-on-surface-variant); font-size: 0.85rem; }
   .btn-prev { color: var(--color-on-surface-variant); }
 
-  .error-msg { color: var(--color-error); font-size: 0.85rem; min-height: 1.25rem; }
+  .error-msg { color: var(--color-error); font-size: 0.85rem; min-height: 1.25rem; margin: 0 0 0.5rem; }
+  .error-msg:empty { margin: 0; }
 
   /* Dasthar Upload */
   .dasthar-upload-area {
@@ -411,33 +414,58 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
   // ── Validation per step ──
   function validateStep(step) {
+    // Clear all field errors
+    document.querySelectorAll(".field-error").forEach((el) => el.classList.remove("field-error"));
     errorMsg.textContent = "";
+
     switch (step) {
       case 1: {
-        const u = document.getElementById("username").value.trim();
-        const n = document.getElementById("full-name").value.trim();
-        const f = document.getElementById("father-name").value.trim();
-        const e = document.getElementById("email").value.trim();
-        const p = document.getElementById("phone").value.trim();
-        if (!/^[a-zA-Z0-9_-]+$/.test(u)) { errorMsg.textContent = "Username: letters, numbers, hyphens, underscores only."; return false; }
-        if (n.length < 2) { errorMsg.textContent = "Please enter your full legal name."; return false; }
-        if (!f) { errorMsg.textContent = "Please enter your father's name."; return false; }
-        if (!e) { errorMsg.textContent = "Please enter your email."; return false; }
-        if (!p) { errorMsg.textContent = "Please enter your phone number."; return false; }
+        const fields = [
+          { id: "username", label: "Username", test: (v) => /^[a-zA-Z0-9_-]+$/.test(v), msg: "Username: letters, numbers, hyphens, underscores only." },
+          { id: "full-name", label: "Full Name", test: (v) => v.length >= 2, msg: "Please enter your full legal name." },
+          { id: "father-name", label: "Father's Name", test: (v) => !!v, msg: "Please enter your father's name." },
+          { id: "email", label: "Email ID", test: (v) => !!v, msg: "Please enter your email." },
+          { id: "phone", label: "Phone Number", test: (v) => !!v, msg: "Please enter your phone number." },
+        ];
+        for (const f of fields) {
+          const el = document.getElementById(f.id);
+          const val = el.value.trim();
+          if (!f.test(val)) {
+            el.closest(".form-group").classList.add("field-error");
+            if (!errorMsg.textContent) errorMsg.textContent = f.msg;
+            return false;
+          }
+        }
         return true;
       }
       case 2: {
         const pw = document.getElementById("password").value;
-        if (pw.length < 6) { errorMsg.textContent = "Password must be at least 6 characters."; return false; }
+        if (pw.length < 6) {
+          document.getElementById("password").closest(".form-group").classList.add("field-error");
+          errorMsg.textContent = "Password must be at least 6 characters.";
+          return false;
+        }
         return true;
       }
       case 3: {
         const tier = document.getElementById("academic-tier").value;
-        if (!tier) { errorMsg.textContent = "Please select your academic tier."; return false; }
+        if (!tier) {
+          document.getElementById("academic-tier").closest(".form-group").classList.add("field-error");
+          errorMsg.textContent = "Please select your academic tier.";
+          return false;
+        }
         if (tier === "JUNIOR" || tier === "FOUNDATION") {
-          if (!document.getElementById("tier-campus").value) { errorMsg.textContent = "Please select your campus."; return false; }
+          if (!document.getElementById("tier-campus").value) {
+            document.getElementById("tier-campus").closest(".form-group").classList.add("field-error");
+            errorMsg.textContent = "Please select your campus.";
+            return false;
+          }
         } else if (["UG","PG","PHD"].includes(tier)) {
-          if (!document.getElementById("course-name").value.trim()) { errorMsg.textContent = "Please enter your course / subject."; return false; }
+          if (!document.getElementById("course-name").value.trim()) {
+            document.getElementById("course-name").closest(".form-group").classList.add("field-error");
+            errorMsg.textContent = "Please enter your course / subject.";
+            return false;
+          }
         }
         return true;
       }
@@ -445,6 +473,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         return true; // optional
       case 5: {
         if (!state.dastharFile && !document.getElementById("dasthar").files?.[0]) {
+          document.getElementById("dasthar-upload-area").classList.add("field-error");
           errorMsg.textContent = "Please upload your Dasthar photo.";
           return false;
         }
