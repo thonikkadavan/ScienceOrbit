@@ -7,23 +7,24 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     <div class="auth-card">
       <div class="auth-card-inner">
         <h1>Create Account</h1>
-        <p class="auth-subtitle">Join Science Orbit — Madeenathunnoor Community</p>
 
         <!-- Progress Bar -->
         <div class="progress-wrap">
           <div class="progress-steps">
             <span class="progress-step" data-step="1">Identity</span>
             <span class="progress-step-sep"></span>
-            <span class="progress-step" data-step="2">Placement</span>
+            <span class="progress-step" data-step="2">Password</span>
             <span class="progress-step-sep"></span>
-            <span class="progress-step" data-step="3">Vetting</span>
+            <span class="progress-step" data-step="3">Placement</span>
             <span class="progress-step-sep"></span>
-            <span class="progress-step" data-step="4">Photo</span>
+            <span class="progress-step" data-step="4">Vetting</span>
+            <span class="progress-step-sep"></span>
+            <span class="progress-step" data-step="5">Photo</span>
           </div>
           <div class="progress-bar-track">
             <div class="progress-bar-fill" id="progress-fill"></div>
           </div>
-          <div class="progress-label" id="progress-label">Step 1 of 4</div>
+          <div class="progress-label" id="progress-label">Step 1 of 5</div>
         </div>
 
         <form id="register-form" class="auth-form" novalidate>
@@ -50,17 +51,25 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <label for="phone">Phone Number</label>
               <input type="tel" id="phone" required placeholder="Enter your phone number" />
             </div>
-            <div class="form-group">
-              <label for="password">Password</label>
-              <input type="password" id="password" required minlength="6" placeholder="At least 6 characters" />
-            </div>
             <div class="step-actions">
               <button type="button" class="btn-neu btn-next" data-next="2">Next Step →</button>
             </div>
           </div>
 
-          <!-- ===== STEP 2 ===== -->
+          <!-- ===== STEP 2: PASSWORD ===== -->
           <div class="step-panel" data-step="2" style="display:none">
+            <div class="form-group">
+              <label for="password">Password</label>
+              <input type="password" id="password" required minlength="6" placeholder="At least 6 characters" />
+            </div>
+            <div class="step-actions">
+              <button type="button" class="btn-neu btn-prev" data-prev="1">← Back</button>
+              <button type="button" class="btn-neu btn-next" data-next="3">Next Step →</button>
+            </div>
+          </div>
+
+          <!-- ===== STEP 3 ===== -->
+          <div class="step-panel" data-step="3" style="display:none">
             <div class="form-group">
               <label for="academic-tier">Academic Tier</label>
               <select id="academic-tier" required>
@@ -89,13 +98,13 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <input type="hidden" id="dars-system" value="Online" />
             </div>
             <div class="step-actions">
-              <button type="button" class="btn-neu btn-prev" data-prev="1">← Back</button>
-              <button type="button" class="btn-neu btn-next" data-next="3">Next Step →</button>
+              <button type="button" class="btn-neu btn-prev" data-prev="2">← Back</button>
+              <button type="button" class="btn-neu btn-next" data-next="4">Next Step →</button>
             </div>
           </div>
 
-          <!-- ===== STEP 3 ===== -->
-          <div class="step-panel" data-step="3" style="display:none">
+          <!-- ===== STEP 4 ===== -->
+          <div class="step-panel" data-step="4" style="display:none">
             <div class="form-group">
               <label for="achievements">Achievements (credential URL)</label>
               <input type="url" id="achievements" placeholder="https://example.com/credential" />
@@ -110,14 +119,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <input type="text" id="organisation" placeholder="e.g. University of Calicut, Google" />
             </div>
             <div class="step-actions">
-              <button type="button" class="btn-neu btn-prev" data-prev="2">← Back</button>
-              <button type="button" class="btn-neu btn-skip" data-next="4">Skip</button>
-              <button type="button" class="btn-neu btn-next" data-next="4">Next Step →</button>
+              <button type="button" class="btn-neu btn-prev" data-prev="3">← Back</button>
+              <button type="button" class="btn-neu btn-skip" data-next="5">Skip</button>
+              <button type="button" class="btn-neu btn-next" data-next="5">Next Step →</button>
             </div>
           </div>
 
-          <!-- ===== STEP 4 ===== -->
-          <div class="step-panel" data-step="4" style="display:none">
+          <!-- ===== STEP 5 ===== -->
+          <div class="step-panel" data-step="5" style="display:none">
             <div class="form-group">
               <label for="dasthar">Photo (Dasthar)</label>
               <div class="dasthar-upload-area" id="dasthar-upload-area">
@@ -132,7 +141,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             </div>
             <p id="error-msg" class="error-msg"></p>
             <div class="step-actions">
-              <button type="button" class="btn-neu btn-prev" data-prev="3">← Back</button>
+              <button type="button" class="btn-neu btn-prev" data-prev="4">← Back</button>
               <button type="submit" class="btn-neu btn-submit" id="submit-btn">
                 <span class="material-symbols-outlined" style="font-size:18px">how_to_reg</span>
                 Create Account &amp; Submit
@@ -173,11 +182,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     font-family: var(--font-headline);
     font-size: 1.5rem;
     margin-bottom: 0;
-  }
-  .auth-subtitle {
-    color: var(--color-on-surface-variant);
-    margin-bottom: 1rem;
-    font-size: 0.8rem;
   }
   .auth-form { display: flex; flex-direction: column; }
 
@@ -307,8 +311,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
   // ── Progress bar update ──
   function updateProgress(step) {
-    document.getElementById("progress-fill").style.width = `${(step / 4) * 100}%`;
-    document.getElementById("progress-label").textContent = `Step ${step} of 4`;
+    document.getElementById("progress-fill").style.width = `${(step / 5) * 100}%`;
+    document.getElementById("progress-label").textContent = `Step ${step} of 5`;
     document.querySelectorAll(".progress-step").forEach((el) => {
       const s = parseInt(el.dataset.step);
       el.classList.toggle("active", s === step);
@@ -340,15 +344,17 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         state.fatherName = document.getElementById("father-name").value.trim();
         state.email = document.getElementById("email").value.trim();
         state.phone = document.getElementById("phone").value.trim();
-        state.password = document.getElementById("password").value;
         break;
       case 2:
+        state.password = document.getElementById("password").value;
+        break;
+      case 3:
         state.academicTier = document.getElementById("academic-tier").value;
         state.campusName = document.getElementById("tier-campus").value;
         state.courseName = document.getElementById("course-name").value.trim();
         state.darsSystem = document.getElementById("dars-system").value;
         break;
-      case 3:
+      case 4:
         state.achievements = document.getElementById("achievements").value.trim();
         state.jobTitle = document.getElementById("job-title").value.trim();
         state.organisation = document.getElementById("organisation").value.trim();
@@ -365,9 +371,11 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         document.getElementById("father-name").value = state.fatherName;
         document.getElementById("email").value = state.email;
         document.getElementById("phone").value = state.phone;
-        document.getElementById("password").value = state.password;
         break;
       case 2:
+        document.getElementById("password").value = state.password;
+        break;
+      case 3:
         document.getElementById("academic-tier").value = state.academicTier;
         // Trigger tier change to populate campus
         document.getElementById("academic-tier").dispatchEvent(new Event("change"));
@@ -381,12 +389,12 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           b.classList.toggle("active", b.dataset.value === state.darsSystem);
         });
         break;
-      case 3:
+      case 4:
         document.getElementById("achievements").value = state.achievements;
         document.getElementById("job-title").value = state.jobTitle;
         document.getElementById("organisation").value = state.organisation;
         break;
-      case 4:
+      case 5:
         // Dasthar preview is restored from file — show hint if no file
         if (!state.dastharFile) {
           document.getElementById("dasthar-preview").innerHTML = "";
@@ -427,16 +435,19 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         const f = document.getElementById("father-name").value.trim();
         const e = document.getElementById("email").value.trim();
         const p = document.getElementById("phone").value.trim();
-        const pw = document.getElementById("password").value;
         if (!/^[a-zA-Z0-9_-]+$/.test(u)) { errorMsg.textContent = "Username: letters, numbers, hyphens, underscores only."; return false; }
         if (n.length < 2) { errorMsg.textContent = "Please enter your full legal name."; return false; }
         if (!f) { errorMsg.textContent = "Please enter your father's name."; return false; }
         if (!e) { errorMsg.textContent = "Please enter your email."; return false; }
         if (!p) { errorMsg.textContent = "Please enter your phone number."; return false; }
-        if (pw.length < 6) { errorMsg.textContent = "Password must be at least 6 characters."; return false; }
         return true;
       }
       case 2: {
+        const pw = document.getElementById("password").value;
+        if (pw.length < 6) { errorMsg.textContent = "Password must be at least 6 characters."; return false; }
+        return true;
+      }
+      case 3: {
         const tier = document.getElementById("academic-tier").value;
         if (!tier) { errorMsg.textContent = "Please select your academic tier."; return false; }
         if (tier === "JUNIOR" || tier === "FOUNDATION") {
@@ -446,9 +457,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         }
         return true;
       }
-      case 3:
+      case 4:
         return true; // optional
-      case 4: {
+      case 5: {
         if (!state.dastharFile && !document.getElementById("dasthar").files?.[0]) {
           errorMsg.textContent = "Please upload your Dasthar photo.";
           return false;
@@ -526,32 +537,39 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     e.preventDefault();
 
     // Save final step data
-    saveCurrentStep(4);
+    saveCurrentStep(5);
 
     errorMsg.textContent = "";
     submitBtn.disabled = true;
     submitBtn.innerHTML = "Creating account...";
 
     // Validate all required fields across all steps
-    if (!state.username || !state.email || !state.password || !state.fullName || !state.fatherName || !state.phone) {
+    if (!state.username || !state.email || !state.fullName || !state.fatherName || !state.phone) {
       errorMsg.textContent = "Please complete Step 1 (Identity) first.";
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">how_to_reg</span> Create Account & Submit';
       showStep(1);
       return;
     }
-    if (!state.academicTier) {
-      errorMsg.textContent = "Please complete Step 2 (Placement) first.";
+    if (!state.password) {
+      errorMsg.textContent = "Please set your password in Step 2.";
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">how_to_reg</span> Create Account & Submit';
       showStep(2);
       return;
     }
-    if (!state.dastharFile) {
-      errorMsg.textContent = "Please upload your Dasthar photo in Step 4.";
+    if (!state.academicTier) {
+      errorMsg.textContent = "Please complete Step 3 (Placement) first.";
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">how_to_reg</span> Create Account & Submit';
-      showStep(4);
+      showStep(3);
+      return;
+    }
+    if (!state.dastharFile) {
+      errorMsg.textContent = "Please upload your Dasthar photo in Step 5.";
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">how_to_reg</span> Create Account & Submit';
+      showStep(5);
       return;
     }
 
