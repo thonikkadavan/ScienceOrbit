@@ -193,7 +193,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .progress-label { font-size: 11px; color: var(--color-on-surface-variant); text-align: right; }
 
   /* Step Panels */
-  .step-panel { animation: slideIn 0.3s ease; display: flex; flex-direction: column; min-height: 310px; }
+  .step-panel { animation: slideIn 0.3s ease; display: flex; flex-direction: column; flex: 1; min-height: 310px; }
   .step-panel .form-group:last-of-type { margin-bottom: 0; }
   .step-panel .step-actions { margin-top: auto; }
   @keyframes slideIn {
@@ -252,8 +252,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .btn-skip { color: var(--color-on-surface-variant); font-size: 0.85rem; }
   .btn-prev { color: var(--color-on-surface-variant); }
 
-  .error-msg { color: var(--color-error); font-size: 0.85rem; min-height: 1.25rem; margin: 0 0 0.5rem; }
-  .error-msg:empty { margin: 0; }
+  .error-msg { color: var(--color-error); font-size: 0.85rem; min-height: 1.25rem; margin: 0 0 0.5rem; flex-shrink: 0; }
+  .error-msg:empty { margin: 0; min-height: 0; }
 
   /* Dasthar Upload */
   .dasthar-upload-area {
