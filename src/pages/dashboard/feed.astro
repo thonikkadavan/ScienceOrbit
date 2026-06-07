@@ -8,7 +8,7 @@ const supabase = createClient({ request: Astro.request, cookies: Astro.cookies }
 const sessionUser = await getSessionUser(supabase);
 const profile = await getProfile(supabase);
 
-const avatarUrl = profile.avatar_url
+const avatarUrl = profile?.avatar_url
   ? supabase.storage.from("avatars").getPublicUrl(profile.avatar_url).data.publicUrl
   : null;
 
