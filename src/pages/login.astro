@@ -2,6 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 const errorParam = Astro.url.searchParams.get("error");
 const loginPrefill = Astro.url.searchParams.get("login") ?? Astro.url.searchParams.get("email");
+const registered = Astro.url.searchParams.get("registered");
 ---
 
 <BaseLayout title="Login">
@@ -20,6 +21,7 @@ const loginPrefill = Astro.url.searchParams.get("login") ?? Astro.url.searchPara
             <input type="password" id="password" name="password" required placeholder="Your password" />
           </div>
           <p id="error-msg" class="error-msg">{errorParam}</p>
+          {registered && <p class="success-msg">Account created! You can now sign in.</p>}
           <button type="submit" class="btn-primary" id="submit-btn">Sign In</button>
         </form>
         <p class="auth-footer">
@@ -74,7 +76,7 @@ const loginPrefill = Astro.url.searchParams.get("login") ?? Astro.url.searchPara
         }
       }
 
-      window.location.href = "/dashboard/feed";
+       window.location.href = "/dashboard";
     } catch (err) {
       if (errorMsg) errorMsg.textContent = err.message || "Sign in failed.";
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Sign In"; }
@@ -160,6 +162,14 @@ const loginPrefill = Astro.url.searchParams.get("login") ?? Astro.url.searchPara
     color: var(--color-error);
     font-size: 0.85rem;
     min-height: 1.25rem;
+  }
+  .success-msg {
+    color: #166534;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+    background: #dcfce7;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
   }
 
   .btn-primary {

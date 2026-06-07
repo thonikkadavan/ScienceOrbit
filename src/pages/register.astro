@@ -16,7 +16,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               id="username"
               required
               placeholder="your-username"
-              pattern="[a-zA-Z0-9_\-]+"
+              pattern="[a-zA-Z0-9_-]+"
               title="Letters, numbers, hyphens, and underscores only"
             />
           </div>
@@ -30,7 +30,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           </div>
           <div class="form-group">
             <label for="phone">Phone No</label>
-            <input type="tel" id="phone" required placeholder="Enter your phone number" pattern="[0-9+\-\s]+" title="Phone number (digits, +, -, spaces only)" />
+            <input type="tel" id="phone" required placeholder="Enter your phone number" pattern="[0-9+() -]+" title="Phone number (digits, +, -, spaces, parentheses only)" />
           </div>
           <div class="form-group">
             <label for="dasthar">Photo (Dasthar)</label>
@@ -116,7 +116,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         email,
         password,
         options: {
-          data: { username },
+          data: { username, father_name: fatherName, phone },
         },
       });
 
@@ -126,7 +126,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       if (!userId) throw new Error("Sign-up succeeded but no user ID returned.");
 
       // Upload dasthar photo
-      let dastharUrl = "";
       if (dastharFile) {
         const ext = dastharFile.name.split(".").pop() || "jpg";
         const filePath = `${userId}/dasthar.${ext}`;
@@ -134,21 +133,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           .from("dasthar")
           .upload(filePath, dastharFile, { upsert: true, contentType: dastharFile.type });
         if (uploadErr) throw uploadErr;
-        dastharUrl = filePath;
-      }
 
-      // Update profile with extra fields
-      const { error: updateErr } = await supabase
-        .from("profiles")
-        .update({
-          father_name: fatherName,
-          phone,
-          dasthar_url: dastharUrl,
-        })
-        .eq("id", userId);
+        // Update profile with dasthar URL only
+        const { error: updateErr } = await supabase
+          .from("profiles")
+          .update({ dasthar_url: filePath })
+          .eq("id", userId);
 
-      if (updateErr) {
-        console.error("Register profile update:", updateErr);
+        if (updateErr) console.error("Dasthar URL update:", updateErr);
       }
 
       window.location.href = "/login?registered=true";
