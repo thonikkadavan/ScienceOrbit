@@ -28,10 +28,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
         <form id="register-form" class="auth-form" novalidate>
 
-          <!-- ===== STEP 1: IDENTITY & BIOMETRICS ===== -->
+          <!-- ===== STEP 1 ===== -->
           <div class="step-panel" data-step="1">
-            <h2 class="step-title"><span class="material-symbols-outlined">badge</span> Identity &amp; Biometrics</h2>
-            <p class="step-desc">Who are you? Let us know your basic details.</p>
             <div class="form-group">
               <label for="username">Username</label>
               <input type="text" id="username" required placeholder="your-username" title="Letters, numbers, hyphens, and underscores only" />
@@ -61,10 +59,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             </div>
           </div>
 
-          <!-- ===== STEP 2: INSTITUTIONAL PLACEMENT ===== -->
+          <!-- ===== STEP 2 ===== -->
           <div class="step-panel" data-step="2" style="display:none">
-            <h2 class="step-title"><span class="material-symbols-outlined">account_balance</span> Institutional Placement</h2>
-            <p class="step-desc">Where do you study? Select your academic tier.</p>
             <div class="form-group">
               <label for="academic-tier">Academic Tier</label>
               <select id="academic-tier" required>
@@ -98,10 +94,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             </div>
           </div>
 
-          <!-- ===== STEP 3: PROFESSIONAL & ACADEMIC VETTING ===== -->
+          <!-- ===== STEP 3 ===== -->
           <div class="step-panel" data-step="3" style="display:none">
-            <h2 class="step-title"><span class="material-symbols-outlined">verified</span> Professional &amp; Academic Vetting</h2>
-            <p class="step-desc">Optional. Add your achievements and employment details, or skip.</p>
             <div class="form-group">
               <label for="achievements">Achievements (credential URL)</label>
               <input type="url" id="achievements" placeholder="https://example.com/credential" />
@@ -122,10 +116,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             </div>
           </div>
 
-          <!-- ===== STEP 4: VERIFICATION & PHOTO ===== -->
+          <!-- ===== STEP 4 ===== -->
           <div class="step-panel" data-step="4" style="display:none">
-            <h2 class="step-title"><span class="material-symbols-outlined">photo_camera</span> Verification &amp; Photo</h2>
-            <p class="step-desc">Upload your Dasthar photo and submit for approval.</p>
             <div class="form-group">
               <label for="dasthar">Photo (Dasthar)</label>
               <div class="dasthar-upload-area" id="dasthar-upload-area">
@@ -174,23 +166,23 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .auth-card-inner {
     background: var(--color-surface-container-low);
     border-radius: var(--radius-lg);
-    padding: 2rem;
+    padding: 1.5rem;
     box-shadow: var(--shadow-extruded);
   }
   .auth-card h1 {
     font-family: var(--font-headline);
-    font-size: 1.65rem;
-    margin-bottom: 0.1rem;
+    font-size: 1.5rem;
+    margin-bottom: 0;
   }
   .auth-subtitle {
     color: var(--color-on-surface-variant);
-    margin-bottom: 1.25rem;
-    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    font-size: 0.8rem;
   }
   .auth-form { display: flex; flex-direction: column; }
 
   /* Progress Bar */
-  .progress-wrap { margin-bottom: 1.5rem; }
+  .progress-wrap { margin-bottom: 1rem; }
   .progress-steps { display: flex; justify-content: space-between; margin-bottom: 0.4rem; }
   .progress-step { font-size: 11px; font-weight: 600; color: var(--color-on-surface-variant); letter-spacing: 0.03em; transition: color 0.2s; }
   .progress-step.active { color: var(--color-primary); }
@@ -206,18 +198,15 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     from { opacity: 0; transform: translateX(20px); }
     to { opacity: 1; transform: translateX(0); }
   }
-  .step-title { display: flex; align-items: center; gap: 0.4rem; font-family: var(--font-headline); font-size: 1.1rem; margin-bottom: 0.15rem; }
-  .step-title .material-symbols-outlined { font-size: 22px; color: var(--color-primary); }
-  .step-desc { font-size: 0.8rem; color: var(--color-on-surface-variant); margin-bottom: 1.25rem; }
 
   /* Form Fields */
-  .form-group { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1rem; }
+  .form-group { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.75rem; }
   .form-group label { font-family: var(--font-label); font-size: 0.82rem; font-weight: 600; color: var(--color-on-surface-variant); }
   .form-group input, .form-group select {
-    padding: 0.7rem 1rem;
+    padding: 0.6rem 0.85rem;
     border: none;
     border-radius: var(--radius-default);
-    font-size: 0.92rem;
+    font-size: 0.9rem;
     outline: none;
     background: var(--color-neu-base);
     box-shadow: var(--shadow-recessed);
@@ -232,25 +221,25 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
   /* Toggle Row */
   .toggle-row { display: flex; gap: 0; border-radius: var(--radius-default); overflow: hidden; box-shadow: var(--shadow-recessed); }
-  .toggle-btn { flex: 1; padding: 0.6rem 1rem; border: none; background: transparent; font-family: var(--font-label); font-size: 13px; font-weight: 600; color: var(--color-on-surface-variant); cursor: pointer; transition: all 0.15s; }
+  .toggle-btn { flex: 1; padding: 0.5rem 1rem; border: none; background: transparent; font-family: var(--font-label); font-size: 13px; font-weight: 600; color: var(--color-on-surface-variant); cursor: pointer; transition: all 0.15s; }
   .toggle-btn.active { box-shadow: var(--shadow-extruded-sm); color: var(--color-primary); background: var(--color-surface-container-low); }
   .toggle-btn:hover:not(.active) { color: var(--color-on-surface); }
 
   /* Step Actions */
-  .step-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+  .step-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
   .btn-neu {
-    padding: 0.7rem 1.25rem;
+    padding: 0.6rem 1.1rem;
     border: none;
     border-radius: var(--radius-default);
     font-family: var(--font-label);
     font-weight: 600;
-    font-size: 0.92rem;
+    font-size: 0.88rem;
     box-shadow: var(--shadow-extruded);
     cursor: pointer;
     transition: all 0.15s;
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.3rem;
     letter-spacing: 0.02em;
     background: var(--color-neu-base);
     color: var(--color-on-surface);
@@ -270,7 +259,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     position: relative;
     border: 2px dashed var(--color-outline);
     border-radius: var(--radius-default);
-    padding: 1.5rem;
+    padding: 1.25rem;
     text-align: center;
     cursor: pointer;
     transition: border-color 0.15s;
@@ -282,7 +271,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .dasthar-preview { margin-top: 0.5rem; display: flex; justify-content: center; }
   .dasthar-preview-img { width: 120px; height: 144px; object-fit: cover; border-radius: var(--radius-default); box-shadow: var(--shadow-extruded-sm); }
 
-  .auth-footer { margin-top: 1.5rem; text-align: center; font-size: 0.85rem; color: var(--color-on-surface-variant); }
+  .auth-footer { margin-top: 1.25rem; text-align: center; font-size: 0.85rem; color: var(--color-on-surface-variant); }
 </style>
 
 <script>
