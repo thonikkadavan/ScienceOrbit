@@ -168,7 +168,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     background: var(--color-surface-container-low);
     border-radius: var(--radius-lg);
     padding: 1.5rem;
-    min-height: 420px;
+    min-height: 460px;
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-extruded);
@@ -176,12 +176,13 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .auth-card h1 {
     font-family: var(--font-headline);
     font-size: 1.5rem;
-    margin-bottom: 0;
+    flex-shrink: 0;
   }
+  .progress-wrap { flex-shrink: 0; }
   .auth-form { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 
   /* Progress Bar */
-  .progress-wrap { margin-bottom: 1rem; }
+  .progress-wrap { margin-bottom: 1rem; flex-shrink: 0; }
   .progress-steps { display: flex; justify-content: space-between; margin-bottom: 0.4rem; }
   .progress-step { font-size: 11px; font-weight: 600; color: var(--color-on-surface-variant); letter-spacing: 0.03em; transition: color 0.2s; }
   .progress-step.active { color: var(--color-primary); }
@@ -192,7 +193,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .progress-label { font-size: 11px; color: var(--color-on-surface-variant); text-align: right; }
 
   /* Step Panels */
-  .step-panel { animation: slideIn 0.3s ease; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .step-panel { animation: slideIn 0.3s ease; display: flex; flex-direction: column; min-height: 310px; }
   .step-panel .form-group:last-of-type { margin-bottom: 0; }
   .step-panel .step-actions { margin-top: auto; }
   @keyframes slideIn {
