@@ -188,7 +188,6 @@ function getTimeAgo(dateStr: string): string {
               <div class="pp-hero-body">
                 <h1 class="pp-name">{profile.legal_name || profile.display_name || profile.username}</h1>
                 {profile.so_id && <code class="pp-so-id">{profile.so_id}</code>}
-                <p class="pp-role">{profile.mentor_name || "Scholar"}</p>
                 <div class="pp-meta">
                   {profile.father_name && (
                     <span class="pp-meta-item">
@@ -200,12 +199,6 @@ function getTimeAgo(dateStr: string): string {
                     <span class="material-symbols-outlined pp-meta-icon">location_on</span>
                     {campusName || "Not affiliated"}
                   </span>
-                  {profile.phone && (
-                    <span class="pp-meta-item">
-                      <span class="material-symbols-outlined pp-meta-icon">call</span>
-                      {profile.phone}
-                    </span>
-                  )}
                   {mentorName && (
                     <span class="pp-meta-item">
                       <span class="material-symbols-outlined pp-meta-icon">school</span>
@@ -342,7 +335,10 @@ function getTimeAgo(dateStr: string): string {
 
           <div class="pp-tab-panel" data-tab="connect">
             <div class="pp-card pp-connect-card">
-              <h3 class="pp-connect-title">Connect</h3>
+              <div class="pp-connect-header">
+                <h3 class="pp-connect-title">Connect</h3>
+                {profile.phone && <a href={`tel:${profile.phone}`} class="pp-phone-link"><span class="material-symbols-outlined">call</span> {profile.phone}</a>}
+              </div>
               <div class="pp-social-row" set:html={socialLinks.map((sl) => {
                 const href = getSocialUrl(sl.platform, sl.value);
                 const label = sl.platform;
@@ -402,7 +398,10 @@ function getTimeAgo(dateStr: string): string {
         <!-- Right Column (desktop only) -->
         <div class="pp-right pp-desktop-only">
           <div class="pp-card pp-connect-card">
-            <h3 class="pp-connect-title">Connect</h3>
+            <div class="pp-connect-header">
+              <h3 class="pp-connect-title">Connect</h3>
+              {profile.phone && <a href={`tel:${profile.phone}`} class="pp-phone-link"><span class="material-symbols-outlined">call</span> {profile.phone}</a>}
+            </div>
             <div class="pp-social-row" set:html={socialLinks.map((sl) => {
               const href = getSocialUrl(sl.platform, sl.value);
               const label = sl.platform;
@@ -715,15 +714,6 @@ function getTimeAgo(dateStr: string): string {
     letter-spacing: -0.02em;
   }
 
-  .pp-role {
-    font-size: 13px;
-    font-weight: 700;
-    color: #0d9488;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin: 0.25rem 0 0.75rem;
-  }
-
   .pp-meta {
     display: flex;
     flex-direction: column;
@@ -917,7 +907,29 @@ function getTimeAgo(dateStr: string): string {
     font-size: 16px;
     font-weight: 700;
     color: #1e293b;
-    margin: 0 0 0.75rem;
+    margin: 0;
+  }
+
+  .pp-connect-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .pp-phone-link {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 13px;
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .pp-phone-link .material-symbols-outlined {
+    font-size: 16px;
   }
 
   .pp-social-row {
