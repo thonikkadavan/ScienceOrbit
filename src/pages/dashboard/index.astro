@@ -18,6 +18,7 @@ if (targetUserId) {
 }
 
 const isOwner = sessionUser?.id === profile.id;
+const isApproved = profile.is_approved ?? false;
 const avatarUrl = profile.avatar_url
   ? supabase.storage.from("avatars").getPublicUrl(profile.avatar_url).data.publicUrl
   : null;
@@ -220,6 +221,16 @@ function getTimeAgo(dateStr: string): string {
               </div>
             </div>
           </div>
+
+          {isOwner && !isApproved && (
+            <div class="pp-card pp-pending-banner">
+              <span class="material-symbols-outlined">hourglass_empty</span>
+              <div>
+                <strong>Account Pending Approval</strong>
+                <p>Your profile is under review. An admin will approve your account shortly.</p>
+              </div>
+            </div>
+          )}
 
           <!-- Mobile Sub Nav -->
           <nav class="pp-mobile-tabs" id="mobile-tabs">
@@ -1276,5 +1287,31 @@ function getTimeAgo(dateStr: string): string {
   }
   .pp-like-btn[data-liked="true"] .pp-like-icon {
     font-variation-settings: "FILL" 1;
+  }
+
+  .pp-pending-banner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: #fff8e6;
+    border: 1px solid #f0d78a;
+    border-radius: 16px;
+    margin-bottom: 1rem;
+  }
+  .pp-pending-banner .material-symbols-outlined {
+    font-size: 28px;
+    color: #b8860b;
+  }
+  .pp-pending-banner strong {
+    display: block;
+    font-size: 14px;
+    color: #6b5200;
+    margin-bottom: 0.15rem;
+  }
+  .pp-pending-banner p {
+    margin: 0;
+    font-size: 13px;
+    color: #8a6b00;
   }
 </style>
