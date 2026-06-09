@@ -105,6 +105,15 @@ try {
                     <span class="preview-achievements-text">{profile.achievements ? profile.achievements.split("\n").filter(Boolean).length + " milestone(s)" : "None listed"}</span>
                   </span>
                 </div>
+                {profile.biography && profile.biography.trim() && (
+                  <div class="preview-detail-box">
+                    <span class="preview-detail-label">Biography</span>
+                    <span class="preview-detail-value" style="align-items: flex-start;">
+                      <span class="material-symbols-outlined preview-detail-icon" style="margin-top:2px">fingerprint</span>
+                      <span class="preview-bio-text">{profile.biography}</span>
+                    </span>
+                  </div>
+                )}
                 <div class="preview-detail-box">
                   <span class="preview-detail-label">Current Project</span>
                   <span class="preview-detail-value" style="flex-direction:column;align-items:flex-start;gap:0.25rem;">
@@ -248,12 +257,16 @@ try {
                   <small style="color:var(--color-on-surface-variant);font-size:0.75rem">If filled, your profile will show an "Alumni" badge.</small>
                 </div>
 
+                <div class="form-section-divider">
+                  <span class="form-section-line"></span>
+                  <span class="form-section-label">Biography</span>
+                  <span class="form-section-line"></span>
+                </div>
+
                 <div class="form-group">
-                  <label for="biography">Biography / Academic Statement</label>
-                  <textarea id="biography" class="neu-input neu-textarea" rows="4" placeholder="Briefly state your core scientific interests, research objectives, or current focus fields within the Madeenathunnoor community..." maxlength="400">{profile.biography || ""}</textarea>
-                  <div class="pp-char-counter">
-                    <span id="bio-chars">{(profile.biography || "").length}</span><span>/400</span>
-                  </div>
+                  <label for="biography">Academic Statement</label>
+                  <textarea id="biography" class="neu-input neu-textarea" maxlength="400" rows="3" placeholder="Briefly state your core scientific interests, research objectives, or current focus fields within the Madeenathunnoor community...">{profile.biography || ""}</textarea>
+                  <div class="bio-counter"><span id="bio-count">{profile.biography ? profile.biography.length : 0}</span> / 400</div>
                 </div>
 
                 <div class="form-section-divider">
@@ -688,12 +701,12 @@ try {
       const jobTitle = document.getElementById("job_title").value.trim();
       const organisation = document.getElementById("organisation").value.trim();
       const achievements = document.getElementById("achievements")?.value?.trim() || "";
+      const biography = document.getElementById("biography")?.value?.trim() || "";
       const repoUrl = document.getElementById("repo_url").value.trim();
       const deployUrl = document.getElementById("deploy_url").value.trim();
       const projectTitle = document.getElementById("project_title").value.trim();
       const projectDescription = document.getElementById("project_description").value.trim();
       const projectProgress = parseInt(document.getElementById("project_progress").value, 10) || 0;
-      const biography = document.getElementById("biography")?.value?.trim() || "";
 
       const { error: updateError } = await supabase
         .from("profiles")
@@ -708,6 +721,7 @@ try {
           organisation: organisation,
           subjects: selectedSubjects,
           achievements,
+          biography,
           tech_stack: selectedTech,
           milestones,
           social_links: socialLinks,
@@ -716,7 +730,6 @@ try {
           project_title: projectTitle,
           project_description: projectDescription,
           project_progress: projectProgress,
-          biography,
         })
         .eq("id", user.id);
 
@@ -821,13 +834,6 @@ try {
       }
     });
 
-    // Biography character counter
-    const bioTextarea = document.getElementById("biography");
-    const bioChars = document.getElementById("bio-chars");
-    bioTextarea?.addEventListener("input", () => {
-      if (bioChars) bioChars.textContent = bioTextarea.value.length;
-    });
-
     // Discard confirmation
     discardBtn?.addEventListener("click", () => {
       document.getElementById("discard-modal")?.classList.add("open");
@@ -843,6 +849,19 @@ try {
         document.getElementById("discard-modal")?.classList.remove("open");
       }
     });
+
+    // ── Biography char counter ──
+    const bioInput = document.getElementById("biography");
+    const bioCount = document.getElementById("bio-count");
+    function updateBioCount() {
+      if (bioInput && bioCount) {
+        const len = bioInput.value.length;
+        bioCount.textContent = len;
+        bioCount.closest(".bio-counter")?.classList.toggle("near-limit", len >= 380);
+      }
+    }
+    bioInput?.addEventListener("input", updateBioCount);
+    updateBioCount();
   })();
 </script>
 
@@ -1021,6 +1040,21 @@ try {
     color: var(--color-primary);
   }
 
+  .preview-bio-text {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--color-on-surface-variant);
+    white-space: pre-line;
+  }
+
+  .bio-counter {
+    text-align: right;
+    font-size: 0.78rem;
+    color: var(--color-on-surface-variant);
+    margin-top: 0.2rem;
+  }
+  .bio-counter.near-limit { color: var(--color-error); }
+
   .preview-subject-list {
     display: flex;
     flex-wrap: wrap;
@@ -1119,19 +1153,6 @@ try {
   .neu-textarea {
     resize: vertical;
     min-height: 100px;
-  }
-
-  .pp-char-counter {
-    text-align: right;
-    font-size: 0.75rem;
-    color: var(--color-outline);
-    font-family: var(--font-label);
-    margin-top: 0.25rem;
-  }
-
-  .pp-char-counter span:first-child {
-    color: var(--color-primary);
-    font-weight: 600;
   }
 
   .subject-panel {

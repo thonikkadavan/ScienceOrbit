@@ -235,6 +235,7 @@ function getTimeAgo(dateStr: string): string {
           <nav class="pp-mobile-tabs" id="mobile-tabs">
             <button class="pp-mtab active" data-tab="posts">Posts</button>
             <button class="pp-mtab" data-tab="achievements">Achievements</button>
+            {(socialLinks.length > 0 || isOwner) && <button class="pp-mtab" data-tab="connect">Connect</button>}
             {projectTitle && <button class="pp-mtab" data-tab="project">Project</button>}
           </nav>
 
@@ -316,6 +317,29 @@ function getTimeAgo(dateStr: string): string {
               </div>
             </div>
           )}
+          </div>
+
+          <div class="pp-tab-panel" data-tab="connect">
+            <div class="pp-card pp-connect-card">
+              <div class="pp-connect-header">
+                <h3 class="pp-connect-title">Connect</h3>
+                {profile.phone && <a href={`tel:${profile.phone}`} class="pp-phone-link"><span class="material-symbols-outlined">call</span> {profile.phone}</a>}
+              </div>
+              <div class="pp-social-row" set:html={socialLinks.map((sl) => {
+                const href = getSocialUrl(sl.platform, sl.value);
+                const label = sl.platform;
+                return `<a href="${href}" target="_blank" class="pp-social-btn" title="${label}">${platformLogo(sl.platform)}</a>`;
+              }).join("")} />
+              {isOwner && (
+                <>
+                  <a href="/dashboard/edit" class="pp-action-btn">Edit Portfolio</a>
+                  <button class="pp-action-btn pp-action-secondary" id="copy-portfolio-link" data-url={portfolioUrl}>
+                    <span class="material-symbols-outlined" style="font-size:16px">link</span>
+                    Copy Portfolio Link
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           <div class="pp-tab-panel" data-tab="project">

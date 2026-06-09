@@ -103,6 +103,11 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <input type="url" id="achievements" placeholder="https://example.com/credential" />
               <small style="color:var(--color-on-surface-variant);font-size:0.75rem">Link to a certificate, award, or credential you hold.</small>
             </div>
+            <div class="form-group" style="margin-bottom: -5px;">
+              <label for="biography">Biography / Academic Statement</label>
+              <textarea id="biography" maxlength="400" rows="3" placeholder="Briefly state your core scientific interests, research objectives, or current focus fields within the Madeenathunnoor community..."></textarea>
+              <div class="char-counter"><span id="bio-count">0</span> / 400</div>
+            </div>
             <div class="form-group">
               <label for="job-title">Job Title</label>
               <input type="text" id="job-title" placeholder="e.g. Research Assistant, Software Engineer" />
@@ -111,14 +116,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <label for="organisation">Organisation</label>
               <input type="text" id="organisation" placeholder="e.g. Calicut University" />
             </div>
-            <div class="form-group">
-              <label for="reg-biography">Biography / Academic Statement</label>
-              <textarea id="reg-biography" class="neu-textarea reg-textarea" rows="3" maxlength="400" placeholder="Briefly state your core scientific interests, research objectives, or current focus fields within the Madeenathunnoor community..."></textarea>
-              <div class="pp-char-counter">
-                <span id="reg-bio-chars">0</span><span>/400</span>
-              </div>
-            </div>
-            <div class="step-actions" style="margin-top:50px">
+            <div class="step-actions" style="margin-top:55px">
               <button type="button" class="btn-neu btn-prev" data-prev="3">← Back</button>
               <button type="button" class="btn-neu btn-skip" data-next="5">Skip</button>
               <button type="button" class="btn-neu btn-next" data-next="5">Next Step →</button>
@@ -226,6 +224,30 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     box-shadow: var(--shadow-recessed), 0 0 0 2px var(--color-primary-container);
   }
   .form-group input::placeholder { color: var(--color-outline); }
+  .form-group textarea {
+    padding: 0.8rem 0.85rem;
+    border: none;
+    border-radius: var(--radius-default);
+    font-size: 0.7rem;
+    outline: none;
+    background: var(--color-neu-base);
+    box-shadow: var(--shadow-recessed);
+    transition: box-shadow 0.15s;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 70px;
+  }
+  .form-group textarea:focus {
+    box-shadow: var(--shadow-recessed), 0 0 0 2px var(--color-primary-container);
+  }
+  .form-group textarea::placeholder { color: var(--color-outline); }
+  .char-counter {
+    text-align: right;
+    font-size: 0.72rem;
+    color: var(--color-on-surface-variant);
+    margin-top: 0.15rem;
+  }
+  .char-counter.near-limit { color: var(--color-error); }
   .form-group select { cursor: pointer; appearance: auto; }
   .is-hidden { display: none; }
   .visible { display: flex; flex-direction: column; gap: 0.25rem; }
@@ -279,22 +301,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .dasthar-preview { margin-top: 0.5rem; display: flex; justify-content: center; }
   .dasthar-preview-img { width: 120px; height: 144px; object-fit: cover; border-radius: var(--radius-default); box-shadow: var(--shadow-extruded-sm); }
 
-  .reg-textarea {
-    resize: vertical;
-    min-height: 72px;
-  }
-  .pp-char-counter {
-    text-align: right;
-    font-size: 0.75rem;
-    color: var(--color-outline);
-    font-family: var(--font-label);
-    margin-top: 0.15rem;
-  }
-  .pp-char-counter span:first-child {
-    color: var(--color-primary);
-    font-weight: 600;
-  }
-
   .auth-footer { margin-top: 1.25rem; text-align: center; font-size: 0.85rem; color: var(--color-on-surface-variant); }
 </style>
 
@@ -318,9 +324,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     campusName: "",
     courseName: "",
     achievements: "",
+    biography: "",
     jobTitle: "",
     organisation: "",
-    biography: "",
     dastharFile: null,
   };
 
@@ -375,9 +381,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         break;
       case 4:
         state.achievements = document.getElementById("achievements").value.trim();
+        state.biography = document.getElementById("biography").value.trim();
         state.jobTitle = document.getElementById("job-title").value.trim();
         state.organisation = document.getElementById("organisation").value.trim();
-        state.biography = document.getElementById("reg-biography").value.trim();
         break;
     }
   }
@@ -406,9 +412,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         break;
       case 4:
         document.getElementById("achievements").value = state.achievements;
+        document.getElementById("biography").value = state.biography;
+        updateBioCount();
         document.getElementById("job-title").value = state.jobTitle;
         document.getElementById("organisation").value = state.organisation;
-        document.getElementById("reg-biography").value = state.biography;
         break;
       case 5:
         // Dasthar preview is restored from file — show hint if no file
@@ -565,6 +572,18 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     reader.readAsDataURL(file);
   });
 
+  // ── Biography char counter ──
+  function updateBioCount() {
+    const el = document.getElementById("biography");
+    const count = document.getElementById("bio-count");
+    if (el && count) {
+      const len = el.value.length;
+      count.textContent = len;
+      count.closest(".char-counter")?.classList.toggle("near-limit", len >= 380);
+    }
+  }
+  document.getElementById("biography")?.addEventListener("input", updateBioCount);
+
   // ── Final Submit ──
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -642,9 +661,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           academic_tier: state.academicTier,
           course_name: state.courseName || null,
           achievements: state.achievements || null,
+          biography: state.biography || null,
           job_title: state.jobTitle || null,
           organisation: state.organisation || null,
-          biography: state.biography || null,
         };
 
         // Look up campus_id
@@ -682,11 +701,4 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
   // ── Init ──
   updateProgress(1);
-
-  // Biography character counter
-  const regBio = document.getElementById("reg-biography");
-  const regBioChars = document.getElementById("reg-bio-chars");
-  regBio?.addEventListener("input", () => {
-    if (regBioChars) regBioChars.textContent = regBio.value.length;
-  });
 </script>
