@@ -111,24 +111,6 @@ const legacyAchievements: string[] = profile.achievements
   ? profile.achievements.split("\n").filter(Boolean)
   : [];
 
-// Orbit count
-const { count: orbitingCount } = await supabase
-  .from("orbits")
-  .select("*", { count: "exact", head: true })
-  .eq("orbiter_id", profile.id);
-
-// Check if session user is orbiting this profile
-let isOrbiting = false;
-if (sessionUser && !isOwner) {
-  const { data: orbitRow } = await supabase
-    .from("orbits")
-    .select("id")
-    .eq("orbiter_id", sessionUser.id)
-    .eq("orbiting_id", profile.id)
-    .maybeSingle();
-  isOrbiting = !!orbitRow;
-}
-
 // Fetch posts by this user
 const { data: userPosts } = await supabase
   .from("posts")
@@ -211,12 +193,6 @@ function getTimeAgo(dateStr: string): string {
                     </span>
                   )}
                 </div>
-                <div class="pp-orbit-stats">
-                  <div class="pp-orbit-stat">
-                    <span class="pp-orbit-num" id="orbiting-count">{orbitingCount ?? 0}</span>
-                    <span class="pp-orbit-label">Orbiting</span>
-                  </div>
-                </div>
                 {academicTier && <span class="pp-tier-badge">{academicTier}</span>}
                 {isAlumni && (
                   <div class="pp-alumni-block">
@@ -226,11 +202,6 @@ function getTimeAgo(dateStr: string): string {
                 )}
                 {courseName && academicTier && ["UG","PG","PHD"].includes(academicTier) && (
                   <p class="pp-course-name">{courseName}</p>
-                )}
-                {!isOwner && (
-                  <button class="pp-follow-btn" id="orbit-btn" data-user-id={profile.id} data-orbiting={isOrbiting}>
-                    {isOrbiting ? "Following" : "Follow"}
-                  </button>
                 )}
                 {profile.subjects && profile.subjects.length > 0 && (
                   <div class="pp-chips-wrap">
@@ -529,34 +500,6 @@ function getTimeAgo(dateStr: string): string {
     }
   });
 
-  // Follow toggle
-  const orbitBtn = document.getElementById("orbit-btn");
-  orbitBtn?.addEventListener("click", async () => {
-    const userId = orbitBtn.dataset.userId;
-    const isOrbiting = orbitBtn.dataset.orbiting === "true";
-    const supabase = createBrowserClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY
-    );
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    if (isOrbiting) {
-      const { error } = await supabase.from("orbits").delete().eq("orbiter_id", user.id).eq("orbiting_id", userId);
-      if (error) { console.error(error); return; }
-      orbitBtn.dataset.orbiting = "false";
-      orbitBtn.textContent = "Follow";
-      const countEl = document.getElementById("orbiting-count");
-      if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
-    } else {
-      const { error } = await supabase.from("orbits").insert({ orbiter_id: user.id, orbiting_id: userId });
-      if (error) { console.error(error); return; }
-      orbitBtn.dataset.orbiting = "true";
-      orbitBtn.textContent = "Following";
-      const countEl = document.getElementById("orbiting-count");
-      if (countEl) countEl.textContent = parseInt(countEl.textContent) + 1;
-    }
-  });
-
   // Mobile tab switching
   const tabs = document.querySelectorAll(".pp-mtab");
   const panels = document.querySelectorAll(".pp-tab-panel");
@@ -645,11 +588,17 @@ function getTimeAgo(dateStr: string): string {
   }
 
   /* ── Hero card ── */
+  .pp-hero-card {
+    background: linear-gradient(135deg, var(--color-surface), var(--color-surface-container-high));
+    border: 1px solid rgba(255,255,255,0.4);
+    box-shadow: 12px 12px 24px rgba(0,0,0,0.06), -8px -8px 16px rgba(255,255,255,0.8);
+  }
+
   .pp-hero-inner {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.5rem;
+    gap: 1.25rem;
   }
 
   @media (min-width: 768px) {
@@ -659,7 +608,28 @@ function getTimeAgo(dateStr: string): string {
     }
   }
 
-  .pp-avatar {
+  .pp-hero-avatars {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+  }
+
+  .pp-hero-avatars::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-tertiary));
+    opacity: 0.15;
+    z-index: 0;
+  }
+
+  .pp-avatar, .pp-dasthar {
+    position: relative;
+    z-index: 1;
     width: 128px;
     height: 128px;
     border-radius: 50%;
@@ -678,23 +648,6 @@ function getTimeAgo(dateStr: string): string {
 
   .pp-avatar-placeholder .material-symbols-outlined {
     font-size: 3rem;
-  }
-
-  .pp-hero-avatars {
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .pp-dasthar {
-    width: 128px;
-    height: 154px;
-    border-radius: var(--radius-md);
-    object-fit: cover;
-    box-shadow: 8px 8px 16px #D1D9E6, -8px -8px 16px #FFFFFF;
-    flex-shrink: 0;
   }
 
   .pp-so-id {
@@ -721,10 +674,10 @@ function getTimeAgo(dateStr: string): string {
   }
 
   .pp-name {
-    font-family: Sora, sans-serif;
+    font-family: var(--font-headline);
     font-size: 28px;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--color-on-surface);
     margin: 0;
     letter-spacing: -0.02em;
   }
@@ -733,7 +686,7 @@ function getTimeAgo(dateStr: string): string {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    margin-bottom: 0.75rem;
+    margin: 0.5rem 0 0.75rem;
   }
 
   .pp-meta-item {
@@ -741,27 +694,15 @@ function getTimeAgo(dateStr: string): string {
     align-items: center;
     gap: 0.4rem;
     font-size: 13px;
-    color: #475569;
+    color: var(--color-on-surface-variant);
   }
 
   .pp-meta-icon {
     font-size: 16px !important;
-    color: #0d9488;
+    color: var(--color-primary);
   }
 
-  .pp-orbit-stats {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-    justify-content: center;
-  }
-
-  @media (min-width: 768px) {
-    .pp-orbit-stats { justify-content: flex-start; }
-  }
-
-  .pp-orbit-stat {
-    padding: 0.35rem 1rem;
+  .pp-course-name {
     border-radius: 12px;
     background: #f7f9fc;
     box-shadow: inset 3px 3px 6px #D1D9E6, inset -3px -3px 6px #FFFFFF;
@@ -773,10 +714,6 @@ function getTimeAgo(dateStr: string): string {
     color: #475569;
   }
 
-  .pp-orbit-num {
-    font-weight: 800;
-    color: #0d9488;
-  }
 
   .pp-tier-badge {
     display: inline-block;
@@ -820,27 +757,6 @@ function getTimeAgo(dateStr: string): string {
     font-weight: 600;
     color: var(--color-tertiary);
     margin: 0.35rem 0 0;
-  }
-
-  .pp-follow-btn {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.4rem 1.25rem;
-    border: none;
-    border-radius: 9999px;
-    background: #f7f9fc;
-    box-shadow: 4px 4px 8px #D1D9E6, -4px -4px 8px #FFFFFF;
-    color: #0d9488;
-    font-family: Inter, sans-serif;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: transform 0.1s;
-  }
-
-  .pp-follow-btn:active {
-    transform: scale(0.96);
-    box-shadow: inset 2px 2px 4px #D1D9E6, inset -2px -2px 4px #FFFFFF;
   }
 
   .pp-chips-wrap {
@@ -1033,34 +949,6 @@ function getTimeAgo(dateStr: string): string {
 
   .pp-social-btn .material-symbols-outlined {
     font-size: 20px !important;
-  }
-
-  .pp-orbit-btn {
-    width: 100%;
-    padding: 0.75rem;
-    border: none;
-    border-radius: 12px;
-    background: #f7f9fc;
-    box-shadow: 4px 4px 8px #D1D9E6, -4px -4px 8px #FFFFFF;
-    color: #0f766e;
-    font-family: Inter, sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: transform 0.1s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .pp-orbit-btn:active {
-    transform: scale(0.98);
-  }
-
-  .pp-orbit-btn-icon {
-    font-size: 18px !important;
   }
 
   .pp-action-btn {
@@ -1263,7 +1151,6 @@ function getTimeAgo(dateStr: string): string {
     .pp-hero-inner { flex-direction: column; align-items: center; }
     .pp-hero-body { text-align: center; }
     .pp-meta { align-items: center; }
-    .pp-orbit-stats { justify-content: center; }
     .pp-chips-wrap { justify-content: center; }
   }
 

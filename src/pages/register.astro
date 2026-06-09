@@ -33,16 +33,16 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           <!-- ===== STEP 1 ===== -->
           <div class="step-panel" data-step="1">
             <div class="form-group">
-              <label for="username">Username</label>
-              <input type="text" id="username" required placeholder="your-username" title="Letters, numbers, hyphens, and underscores only" />
+              <label for="username">User Name</label>
+              <input type="text" id="username" required placeholder="User Name" title="Letters, numbers, hyphens, and underscores only" />
             </div>
             <div class="form-group">
               <label for="full-name">Full Name</label>
-              <input type="text" id="full-name" required placeholder="Enter your full legal name" />
+              <input type="text" id="full-name" required placeholder="Enter Your Full Name" />
             </div>
             <div class="form-group">
               <label for="father-name">Father's Name</label>
-              <input type="text" id="father-name" required placeholder="Enter your father's name" />
+              <input type="text" id="father-name" required placeholder="Enter Your Father's Name" />
             </div>
             <div class="form-group">
               <label for="email">Email ID</label>
@@ -50,7 +50,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             </div>
             <div class="form-group">
               <label for="phone">Phone Number</label>
-              <input type="tel" id="phone" required placeholder="Enter your phone number" />
+              <input type="tel" id="phone" required placeholder="Enter Your Phone Number" />
             </div>
             <div class="step-actions">
               <button type="button" class="btn-neu btn-next" data-next="2">Next Step →</button>
@@ -63,7 +63,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <label for="password">Password</label>
               <input type="password" id="password" required minlength="6" placeholder="At least 6 characters" />
             </div>
-            <div class="step-actions">
+            <div class="step-actions" style="margin-top:180px;">
               <button type="button" class="btn-neu btn-prev" data-prev="1">← Back</button>
               <button type="button" class="btn-neu btn-next" data-next="3">Next Step →</button>
             </div>
@@ -90,7 +90,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <label for="course-name">Course / Subject</label>
               <input type="text" id="course-name" placeholder="e.g. BSc Physics, MA History, PhD CS" />
             </div>
-            <div class="step-actions">
+            <div class="step-actions" style="margin-top:110px">
               <button type="button" class="btn-neu btn-prev" data-prev="2">← Back</button>
               <button type="button" class="btn-neu btn-next" data-next="4">Next Step →</button>
             </div>
@@ -98,7 +98,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
           <!-- ===== STEP 4 ===== -->
           <div class="step-panel" data-step="4" style="display:none">
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom: -15px; padding-top: 8px;">
               <label for="achievements">Achievements (credential URL)</label>
               <input type="url" id="achievements" placeholder="https://example.com/credential" />
               <small style="color:var(--color-on-surface-variant);font-size:0.75rem">Link to a certificate, award, or credential you hold.</small>
@@ -109,9 +109,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             </div>
             <div class="form-group">
               <label for="organisation">Organisation</label>
-              <input type="text" id="organisation" placeholder="e.g. University of Calicut, Google" />
+              <input type="text" id="organisation" placeholder="e.g. Calicut University" />
             </div>
-            <div class="step-actions">
+            <div class="step-actions" style="margin-top:90px">
               <button type="button" class="btn-neu btn-prev" data-prev="3">← Back</button>
               <button type="button" class="btn-neu btn-skip" data-next="5">Skip</button>
               <button type="button" class="btn-neu btn-next" data-next="5">Next Step →</button>
@@ -132,7 +132,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <div id="dasthar-preview" class="dasthar-preview"></div>
               <small style="color:var(--color-on-surface-variant);font-size:0.75rem">JPEG, PNG, or WebP. Max 5MB.</small>
             </div>
-            <div class="step-actions">
+            <div class="step-actions" style="margin-top:65px">
               <button type="button" class="btn-neu btn-prev" data-prev="4">← Back</button>
               <button type="submit" class="btn-neu btn-submit" id="submit-btn">
                 <span class="material-symbols-outlined" style="font-size:18px">how_to_reg</span>
@@ -205,10 +205,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .form-group { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.75rem; }
   .form-group label { font-family: var(--font-label); font-size: 0.82rem; font-weight: 600; color: var(--color-on-surface-variant); }
   .form-group input, .form-group select {
-    padding: 0.6rem 0.85rem;
+    padding: 0.8rem 0.85rem;
     border: none;
     border-radius: var(--radius-default);
-    font-size: 0.9rem;
+    font-size: 0.7rem;
     outline: none;
     background: var(--color-neu-base);
     box-shadow: var(--shadow-recessed);
