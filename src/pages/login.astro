@@ -1,10 +1,12 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import SplashScreen from "../components/SplashScreen.astro";
 const errorParam = Astro.url.searchParams.get("error");
 const loginPrefill = Astro.url.searchParams.get("login") ?? Astro.url.searchParams.get("email");
 ---
 
 <BaseLayout title="Login">
+  <SplashScreen autoHide={3000} />
   <div class="auth-page">
     <div class="auth-card">
       <div class="auth-card-inner">
