@@ -8,14 +8,12 @@ export interface Props {
 const { autoHide = 2500 } = Astro.props;
 ---
 
-<div class="splash-overlay" id="splash-overlay">
+<div class="splash-overlay" id="splash-overlay" data-auto-hide={autoHide}>
   <div class="splash-canvas">
     <div class="splash-content">
       <div class="splash-emblem">
         <div class="splash-emblem-outer">
-          <div class="splash-emblem-inner">
-            <span class="material-symbols-outlined splash-emblem-icon">science</span>
-          </div>
+          <img src="/logo.png" alt="Science Orbit" class="splash-emblem-img" />
         </div>
       </div>
 
@@ -39,6 +37,7 @@ const { autoHide = 2500 } = Astro.props;
 <script>
   (function () {
     const overlay = document.getElementById("splash-overlay");
+    const autoHideMs = parseInt(overlay?.dataset.autoHide || "2500", 10);
     let hidden = false;
 
     window.hideSplash = function () {
@@ -61,7 +60,7 @@ const { autoHide = 2500 } = Astro.props;
     };
 
     document.addEventListener("DOMContentLoaded", () => {
-      setTimeout(window.hideSplash, {autoHide});
+      setTimeout(window.hideSplash, autoHideMs);
     });
   })();
 </script>
@@ -131,6 +130,7 @@ const { autoHide = 2500 } = Astro.props;
     align-items: center;
     justify-content: center;
     animation: splash-pulse 3s ease-in-out infinite;
+    overflow: hidden;
   }
 
   @keyframes splash-pulse {
@@ -138,21 +138,11 @@ const { autoHide = 2500 } = Astro.props;
     50% { transform: scale(1.02); }
   }
 
-  .splash-emblem-inner {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: var(--color-primary, #006a67);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: inset -4px -4px 8px rgba(0,0,0,0.15), inset 4px 4px 8px rgba(255,255,255,0.2);
-  }
-
-  .splash-emblem-icon {
-    font-size: 40px !important;
-    color: var(--color-on-primary, #ffffff);
-    font-variation-settings: "FILL" 1, "wght" 400;
+  .splash-emblem-img {
+    width: 70%;
+    height: 70%;
+    object-fit: contain;
+    display: block;
   }
 
   .splash-typography {
@@ -232,13 +222,6 @@ const { autoHide = 2500 } = Astro.props;
     .splash-emblem-outer {
       width: 96px;
       height: 96px;
-    }
-    .splash-emblem-inner {
-      width: 60px;
-      height: 60px;
-    }
-    .splash-emblem-icon {
-      font-size: 30px !important;
     }
     .splash-content {
       gap: 1.5rem;
