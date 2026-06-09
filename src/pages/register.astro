@@ -111,7 +111,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <label for="organisation">Organisation</label>
               <input type="text" id="organisation" placeholder="e.g. Calicut University" />
             </div>
-            <div class="step-actions" style="margin-top:90px">
+            <div class="form-group">
+              <label for="reg-biography">Biography / Academic Statement</label>
+              <textarea id="reg-biography" class="neu-textarea reg-textarea" rows="3" maxlength="400" placeholder="Briefly state your core scientific interests, research objectives, or current focus fields within the Madeenathunnoor community..."></textarea>
+              <div class="pp-char-counter">
+                <span id="reg-bio-chars">0</span><span>/400</span>
+              </div>
+            </div>
+            <div class="step-actions" style="margin-top:50px">
               <button type="button" class="btn-neu btn-prev" data-prev="3">← Back</button>
               <button type="button" class="btn-neu btn-skip" data-next="5">Skip</button>
               <button type="button" class="btn-neu btn-next" data-next="5">Next Step →</button>
@@ -272,6 +279,22 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .dasthar-preview { margin-top: 0.5rem; display: flex; justify-content: center; }
   .dasthar-preview-img { width: 120px; height: 144px; object-fit: cover; border-radius: var(--radius-default); box-shadow: var(--shadow-extruded-sm); }
 
+  .reg-textarea {
+    resize: vertical;
+    min-height: 72px;
+  }
+  .pp-char-counter {
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--color-outline);
+    font-family: var(--font-label);
+    margin-top: 0.15rem;
+  }
+  .pp-char-counter span:first-child {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
   .auth-footer { margin-top: 1.25rem; text-align: center; font-size: 0.85rem; color: var(--color-on-surface-variant); }
 </style>
 
@@ -297,6 +320,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     achievements: "",
     jobTitle: "",
     organisation: "",
+    biography: "",
     dastharFile: null,
   };
 
@@ -353,6 +377,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         state.achievements = document.getElementById("achievements").value.trim();
         state.jobTitle = document.getElementById("job-title").value.trim();
         state.organisation = document.getElementById("organisation").value.trim();
+        state.biography = document.getElementById("reg-biography").value.trim();
         break;
     }
   }
@@ -383,6 +408,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         document.getElementById("achievements").value = state.achievements;
         document.getElementById("job-title").value = state.jobTitle;
         document.getElementById("organisation").value = state.organisation;
+        document.getElementById("reg-biography").value = state.biography;
         break;
       case 5:
         // Dasthar preview is restored from file — show hint if no file
@@ -618,6 +644,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           achievements: state.achievements || null,
           job_title: state.jobTitle || null,
           organisation: state.organisation || null,
+          biography: state.biography || null,
         };
 
         // Look up campus_id
@@ -655,4 +682,11 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
   // ── Init ──
   updateProgress(1);
+
+  // Biography character counter
+  const regBio = document.getElementById("reg-biography");
+  const regBioChars = document.getElementById("reg-bio-chars");
+  regBio?.addEventListener("input", () => {
+    if (regBioChars) regBioChars.textContent = regBio.value.length;
+  });
 </script>

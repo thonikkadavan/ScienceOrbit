@@ -35,6 +35,7 @@ export type Database = {
           academic_tier: string
           achievements: string | null
           avatar_url: string | null
+          biography: string
           campus_id: string | null
           course_name: string
           created_at: string | null
@@ -69,6 +70,7 @@ export type Database = {
           academic_tier?: string
           achievements?: string | null
           avatar_url?: string | null
+          biography?: string
           campus_id?: string | null
           course_name?: string
           created_at?: string | null
@@ -103,6 +105,7 @@ export type Database = {
           academic_tier?: string
           achievements?: string | null
           avatar_url?: string | null
+          biography?: string
           campus_id?: string | null
           course_name?: string
           created_at?: string | null
