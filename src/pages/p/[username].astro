@@ -66,23 +66,12 @@ const achievementsList = profile.achievements
             ))}
           </div>
         )}
+        {profile.biography && <p class="pp-bio-text">{profile.biography}</p>}
         <button class="pp-resume-btn">
           <span class="material-symbols-outlined">download</span>
           Download Resume
         </button>
       </div>
-
-      {profile.biography && (
-        <section class="pp-bio">
-          <div class="pp-bio-card">
-            <div class="pp-bio-header">
-              <span class="material-symbols-outlined pp-bio-icon">person_search</span>
-              <h2 class="pp-section-title" style="margin:0">Academic Profile Summary</h2>
-            </div>
-            <p class="pp-bio-text">{profile.biography}</p>
-          </div>
-        </section>
-      )}
 
       {achievementsList.length > 0 && (
         <section class="pp-milestones">
@@ -304,37 +293,12 @@ const achievementsList = profile.achievements
     font-size: 1.25rem;
   }
 
-  .pp-bio {
-    width: 100%;
-    margin-bottom: 2.5rem;
-  }
-
-  .pp-bio-card {
-    width: 100%;
-    padding: 1.5rem;
-    border-radius: var(--radius-lg);
-    box-shadow: 12px 12px 24px rgba(0,0,0,0.06), -8px -8px 16px rgba(255,255,255,0.8);
-    background: var(--color-surface);
-    border: 1px solid rgba(255,255,255,0.4);
-  }
-
-  .pp-bio-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-  }
-
-  .pp-bio-icon {
-    font-size: 1.25rem;
-    color: var(--color-primary);
-  }
-
   .pp-bio-text {
     font-size: 14px;
     line-height: 1.7;
     color: var(--color-on-surface-variant);
-    margin: 0;
+    margin: 0 0 1.5rem;
+    max-width: 580px;
     word-wrap: break-word;
     overflow-wrap: break-word;
   }
