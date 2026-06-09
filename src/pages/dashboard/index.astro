@@ -217,6 +217,11 @@ function getTimeAgo(dateStr: string): string {
                     ))}
                   </div>
                 )}
+                {profile.biography && profile.biography.trim() && (
+                  <div class="pp-bio-summary">
+                    <p class="pp-bio-summary-text">{profile.biography}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -787,6 +792,20 @@ function getTimeAgo(dateStr: string): string {
     box-shadow: inset 2px 2px 4px #D1D9E6, inset -2px -2px 4px #FFFFFF;
     color: #64748b;
     font-size: 10px;
+  }
+
+  .pp-bio-summary {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-outline-variant, #bacac8);
+  }
+
+  .pp-bio-summary-text {
+    font-size: 0.85rem;
+    line-height: 1.65;
+    color: var(--color-on-surface-variant, #3b4948);
+    margin: 0;
+    white-space: pre-line;
   }
 
   /* ── Achievements ── */
