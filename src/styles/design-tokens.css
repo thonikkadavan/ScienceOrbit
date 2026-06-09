@@ -128,3 +128,6 @@
   --shadow-raised-dark: 8px 8px 16px var(--color-neu-shadow);
   --shadow-raised: var(--shadow-raised-light), var(--shadow-raised-dark);
 }
+a, button, input, select, textarea, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+}
