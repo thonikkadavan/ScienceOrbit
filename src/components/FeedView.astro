@@ -1,0 +1,1667 @@
+---
+export interface Props {
+  profile: any;
+  sessionUser: any;
+  avatarUrl: string | null;
+  postsWithAuthors: any[];
+  newUsers: any[];
+  likeCountMap: Map<string, number>;
+  likedPosts: Set<string>;
+  isGuest: boolean;
+}
+
+const { profile, sessionUser, avatarUrl, postsWithAuthors, newUsers, likeCountMap, likedPosts, isGuest } = Astro.props;
+
+function getTimeAgo(dateStr: string | null): string {
+  if (!dateStr) return "";
+  const now = new Date();
+  const d = new Date(dateStr);
+  const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+
+function avatarStorageUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  if (path.startsWith("http")) return path;
+  return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`;
+}
+---
+
+<div class="feed-view-content">
+  <div class="feed-content">
+    {!profile ? (
+      <div class="guest-banner">
+        <span class="material-symbols-outlined guest-banner-icon">visibility</span>
+        <span>You're browsing as a guest. <a href="/login" class="guest-banner-link">Sign in</a> or <a href="/register" class="guest-banner-link">Register</a> to join the conversation.</span>
+      </div>
+    ) : null}
+    <div class="top-search-wrap">
+      <span class="material-symbols-outlined top-search-icon">search</span>
+      <input class="top-search-input" type="text" id="top-search" placeholder="Search scholars and posts..." autocomplete="off" />
+      <button class="top-search-clear" id="top-search-clear" aria-label="Clear">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+      <button class="feed-refresh-btn" id="feed-refresh" aria-label="Refresh feed">
+        <span class="material-symbols-outlined">refresh</span>
+      </button>
+      <div class="top-search-dropdown" id="top-search-dropdown"></div>
+    </div>
+
+    <div class="feed-newusers">
+      <div class="feed-newusers-label">New Members</div>
+      <div class="feed-newusers-list">
+        {(newUsers || []).map((u) => {
+          const uAvatar = avatarStorageUrl(u.avatar_url);
+          return (
+            <a href={`/dashboard?user=${u.id}`} class="feed-newuser-item" title={u.display_name || u.username}>
+              {uAvatar ? (
+                <img src={uAvatar} alt="" class="feed-newuser-avatar" />
+              ) : (
+                <div class="feed-newuser-avatar feed-newuser-placeholder">
+                  <span class="material-symbols-outlined">person</span>
+                </div>
+              )}
+              <span class="feed-newuser-name">{u.display_name || u.username}</span>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+
+    {profile ? (
+    <div class="feed-composer-overlay" id="composer-overlay">
+      <div class="feed-composer-modal">
+        <div class="composer-modal-header">
+          <h3>Create Post</h3>
+          <button class="composer-close-btn" id="composer-close" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="post-composer">
+          <div class="composer-avatar">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" class="composer-avatar-img" />
+            ) : (
+              <div class="composer-avatar-placeholder">
+                <span class="material-symbols-outlined">person</span>
+              </div>
+            )}
+          </div>
+          <div class="composer-input-area">
+            <input class="composer-input composer-title-input" type="text" id="composer-title" placeholder="Post title..." />
+            <textarea class="composer-input composer-textarea" placeholder="Share your latest findings..." rows="4"></textarea>
+            <div class="composer-preview" id="composer-preview" style="display:none"></div>
+          </div>
+          <div class="composer-actions">
+            <button class="composer-action-btn" id="composer-image-btn" aria-label="Add image">
+              <span class="material-symbols-outlined">image</span>
+            </button>
+            <input type="file" id="composer-image-input" accept="image/*" style="display:none" />
+            <button class="composer-action-btn" id="composer-attach-btn" aria-label="Attach file">
+              <span class="material-symbols-outlined">attach_file</span>
+            </button>
+            <input type="file" id="composer-file-input" style="display:none" />
+            <button class="composer-post-btn">Post</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    ) : null}
+
+    <div class="profile-overlay" id="profile-overlay">
+      <div class="profile-modal">
+        <div class="profile-modal-header">
+          <h3>Scholar Profile</h3>
+          <button class="profile-close-btn" id="profile-close" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="profile-modal-body" id="profile-modal-body"></div>
+      </div>
+    </div>
+
+    {profile ? (
+    <button class="feed-fab" id="fab-add" aria-label="Create post">
+      <span class="material-symbols-outlined">add</span>
+    </button>
+    ) : null}
+
+    <div class="feed-posts" id="feed-posts">
+      {postsWithAuthors.length === 0 && (
+        <p class="feed-empty">No posts yet. Be the first to share your findings!</p>
+      )}
+      {postsWithAuthors.map((post) => {
+        const author = post.author;
+        const authorAvatar = avatarStorageUrl(author?.avatar_url);
+        const timeAgo = getTimeAgo(post.created_at);
+        return (
+        <article class="feed-post" data-post-id={post.id}>
+          <div class="post-header">
+            <a href={`/dashboard?user=${post.user_id}`} class="post-author">
+              <div class="post-avatar">
+                {authorAvatar ? (
+                  <img src={authorAvatar} alt="" class="post-avatar-img" />
+                ) : (
+                  <span class="material-symbols-outlined">account_circle</span>
+                )}
+              </div>
+              <div class="post-author-info">
+                <strong class="post-author-name">{author?.display_name || author?.username || "Unknown"}</strong>
+                <span class="post-author-meta">{timeAgo}</span>
+              </div>
+            </a>
+            {profile && post.user_id === profile.id && (
+              <button class="post-menu-btn post-delete-btn" data-post-id={post.id} aria-label="Delete post">
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+            )}
+          </div>
+          <div class="post-body">
+            {post.title ? <h4 class="post-title">{post.title}</h4> : null}
+            {post.content ? <p class="post-text">{post.content}</p> : null}
+            {post.content ? <button class="post-seemore" style="display:none">See more</button> : null}
+            {post.image_url ? <img src={post.image_url} class="post-image" alt="" loading="lazy" /> : null}
+            {post.file_url ? <a href={post.file_url} target="_blank" class="post-attach-link"><span class="material-symbols-outlined">description</span> {post.file_name || "Attachment"}</a> : null}
+          </div>
+          <div class="post-actions">
+            <button class="post-action-btn post-like-btn" data-post-id={post.id} data-liked={likedPosts.has(post.id) ? "true" : "false"}>
+              <span class="material-symbols-outlined post-like-icon">{likedPosts.has(post.id) ? "favorite" : "favorite_border"}</span>
+              <span class="post-like-count">{likeCountMap.get(post.id) || 0}</span>
+            </button>
+            <button class="post-action-btn post-share-btn" data-post-url={`${Astro.url.origin}/dashboard?user=${post.user_id}`} aria-label="Share post">
+              <span class="material-symbols-outlined">share</span>
+            </button>
+          </div>
+        </article>
+        );
+      })}
+    </div>
+  </div>
+</div>
+
+<script>
+  import { createBrowserClient } from "@supabase/ssr";
+
+  const supabase = createBrowserClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+  );
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // Guest check - if no composer elements, we're viewing as guest
+  const isGuest = !document.getElementById("fab-add");
+
+  // Composer modal (auth only)
+  const fab = document.getElementById("fab-add");
+  const overlay = document.getElementById("composer-overlay");
+  const closeBtn = document.getElementById("composer-close");
+
+  fab?.addEventListener("click", () => overlay?.classList.add("open"));
+  closeBtn?.addEventListener("click", () => overlay?.classList.remove("open"));
+  overlay?.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.classList.remove("open");
+  });
+
+  // Handle image load errors - replace broken images with an icon
+  document.querySelectorAll(".post-image, .pp-post-image").forEach((img) => {
+    img.addEventListener("error", () => {
+      img.style.display = "none";
+      const fallback = document.createElement("div");
+      fallback.className = "post-image-fallback";
+      fallback.innerHTML = '<span class="material-symbols-outlined" style="font-size:2rem;color:var(--color-outline)">broken_image</span>';
+      img.parentElement?.insertBefore(fallback, img.nextSibling);
+    });
+  });
+
+  // "See more" toggle for post content
+  // Share button - copy post URL
+  document.addEventListener("click", async (e) => {
+    const shareBtn = e.target.closest(".post-share-btn");
+    if (shareBtn) {
+      const url = shareBtn.dataset.postUrl;
+      if (navigator.share) {
+        await navigator.share({ title: "Science Orbit", url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        const original = shareBtn.innerHTML;
+        shareBtn.innerHTML = '<span class="material-symbols-outlined">check</span>';
+        setTimeout(() => { shareBtn.innerHTML = original; }, 2000);
+      }
+      return;
+    }
+    const btn = e.target.closest(".post-seemore");
+    if (!btn) return;
+    const text = btn.parentElement.querySelector(".post-text");
+    if (!text) return;
+    text.classList.toggle("expanded");
+    btn.textContent = text.classList.contains("expanded") ? "Show less" : "See more";
+  });
+  // Show "See more" only on posts where content overflows
+  document.querySelectorAll(".post-text").forEach((el) => {
+    if (el.scrollHeight > el.clientHeight) {
+      const btn = el.parentElement.querySelector(".post-seemore");
+      if (btn) btn.style.display = "";
+    }
+  });
+
+  // Profile viewer modal
+  const profileOverlay = document.getElementById("profile-overlay");
+  const profileClose = document.getElementById("profile-close");
+  const profileBody = document.getElementById("profile-modal-body");
+
+  profileClose?.addEventListener("click", () => profileOverlay?.classList.remove("open"));
+  profileOverlay?.addEventListener("click", (e) => {
+    if (e.target === profileOverlay) profileOverlay.classList.remove("open");
+  });
+
+  function avatarUrl(path) {
+    if (!path) return null;
+    if (path.startsWith("http")) return path;
+    return supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+  }
+
+  function showProfile(profile) {
+    const subs = Array.isArray(profile.subjects) ? profile.subjects : [];
+    const achievements = profile.achievements
+      ? profile.achievements.split("\n").filter(Boolean)
+      : [];
+    const campusName = escapeHtml(profile.campuses?.name || "");
+    const displayName = escapeHtml(profile.display_name || profile.username);
+    const username = escapeHtml(profile.username);
+    const avUrl = avatarUrl(profile.avatar_url);
+    const avatarHtml = avUrl
+      ? `<img src="${avUrl}" alt="" class="pv-avatar-img" />`
+      : `<div class="pv-avatar-placeholder"><span class="material-symbols-outlined">person</span></div>`;
+
+    profileBody.innerHTML = `
+      <div class="pv-hero">
+        <div class="pv-avatar">${avatarHtml}</div>
+        <h2 class="pv-name">${displayName}</h2>
+        <span class="pv-username">@${username}</span>
+        ${campusName ? `<div class="pv-campus"><span class="material-symbols-outlined">location_on</span> ${campusName}</div>` : ""}
+      </div>
+      ${subs.length ? `<div class="pv-section"><h4 class="pv-section-title">Subjects</h4><div class="pv-chips">${subs.map(s => `<span class="pv-chip">${escapeHtml(s)}</span>`).join("")}</div></div>` : ""}
+      ${achievements.length ? `<div class="pv-section"><h4 class="pv-section-title">Achievements</h4><ul class="pv-achievements">${achievements.map(a => `<li class="pv-achievement"><span class="material-symbols-outlined pv-achievement-icon">emoji_events</span>${escapeHtml(a)}</li>`).join("")}</ul></div>` : ""}
+      <div class="pv-actions">
+        <a href="/dashboard?user=${profile.id}" class="pv-view-btn">View Full Portfolio</a>
+      </div>
+    `;
+    profileOverlay?.classList.add("open");
+  }
+
+  // Search
+  const searchInput = document.getElementById("top-search");
+  const searchClear = document.getElementById("top-search-clear");
+  const searchDropdown = document.getElementById("top-search-dropdown");
+  let searchTimer;
+  let searchFocused = false;
+
+  function closeDropdown() { searchDropdown.classList.remove("open"); searchFocused = false; }
+
+  searchClear?.addEventListener("click", () => {
+    searchInput.value = "";
+    closeDropdown();
+    searchInput.focus();
+  });
+
+  searchInput?.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchClear.style.display = searchInput.value ? "flex" : "none";
+    const query = searchInput.value.trim();
+    if (!query) { searchDropdown.classList.remove("open"); searchDropdown.innerHTML = ""; return; }
+    searchTimer = setTimeout(() => doSearch(query), 250);
+  });
+
+  searchInput?.addEventListener("focus", () => { searchFocused = true; });
+  searchInput?.addEventListener("blur", () => setTimeout(() => { if (!searchFocused) closeDropdown(); }, 200));
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".top-search-wrap")) closeDropdown();
+  });
+
+  async function doSearch(query) {
+    searchDropdown.innerHTML = `<div class="tsd-status">Searching...</div>`;
+    searchDropdown.classList.add("open");
+
+    const [profilesRes] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url, subjects, achievements, campuses(name)")
+        .eq("is_approved", true)
+        .or(`username.ilike.%${query}%,display_name.ilike.%${query}%,legal_name.ilike.%${query}%`)
+        .limit(6)
+    ]);
+
+    let html = "";
+
+    if (profilesRes.error) {
+      html = `<div class="tsd-status tsd-error">Search failed</div>`;
+    } else {
+      if (profilesRes.data.length) {
+        html += `<div class="tsd-group-title">Scholars</div>`;
+        html += profilesRes.data.map(p => {
+          const dn = escapeHtml(p.display_name || p.username);
+          const un = escapeHtml(p.username);
+          const initial = (dn || "?")[0].toUpperCase();
+          const avUrl = avatarUrl(p.avatar_url);
+          const img = avUrl
+            ? `<img src="${avUrl}" alt="" class="tsd-avatar-img" />`
+            : `<div class="tsd-avatar-placeholder">${initial}</div>`;
+          const subs = Array.isArray(p.subjects) ? p.subjects.slice(0, 2) : [];
+          return `<div class="tsd-item tsd-user" data-user='${JSON.stringify(p).replace(/'/g, "&#39;")}'>
+            ${img}
+            <div class="tsd-info">
+              <span class="tsd-name">${dn}</span>
+              <span class="tsd-meta">@${un}</span>
+              ${subs.length ? `<div class="tsd-chips">${subs.map(s => `<span class="tsd-chip">${escapeHtml(s)}</span>`).join("")}</div>` : ""}
+            </div>
+          </div>`;
+        }).join("");
+      }
+    }
+
+    if (!html) html = `<div class="tsd-status">No results found</div>`;
+
+    searchDropdown.innerHTML = html;
+
+    searchDropdown.querySelectorAll(".tsd-user").forEach(el => {
+      el.addEventListener("click", () => {
+        showProfile(JSON.parse(el.dataset.user));
+        closeDropdown();
+      });
+    });
+  }
+  // Post creation
+  const composerTextarea = document.querySelector(".composer-textarea");
+  const postBtn = document.querySelector(".composer-post-btn");
+  const feedPosts = document.getElementById("feed-posts");
+  const composerPreview = document.getElementById("composer-preview");
+  let pendingImageUrl = "";
+  let pendingFileUrl = "";
+  let pendingFileName = "";
+
+  // Image upload
+  const imageInput = document.getElementById("composer-image-input");
+  document.getElementById("composer-image-btn")?.addEventListener("click", () => imageInput?.click());
+  imageInput?.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const ext = file.name.split(".").pop();
+    const path = `posts/${user.id}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("post_images").upload(path, file);
+    if (error) { console.error(error); return; }
+    const { data: { publicUrl } } = supabase.storage.from("post_images").getPublicUrl(path);
+    pendingImageUrl = publicUrl;
+    composerPreview.style.display = "flex";
+    composerPreview.innerHTML = `<img src="${publicUrl}" class="composer-preview-img" /><button class="composer-preview-remove" id="preview-remove-img"><span class="material-symbols-outlined">close</span></button>`;
+    document.getElementById("preview-remove-img")?.addEventListener("click", () => { pendingImageUrl = ""; composerPreview.style.display = "none"; composerPreview.innerHTML = ""; imageInput.value = ""; });
+  });
+
+  // File upload
+  const fileInput = document.getElementById("composer-file-input");
+  document.getElementById("composer-attach-btn")?.addEventListener("click", () => fileInput?.click());
+  fileInput?.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const ext = file.name.split(".").pop();
+    const path = `posts/${user.id}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("post_images").upload(path, file);
+    if (error) { console.error(error); return; }
+    const { data: { publicUrl } } = supabase.storage.from("post_images").getPublicUrl(path);
+    pendingFileUrl = publicUrl;
+    pendingFileName = file.name;
+    composerPreview.style.display = "flex";
+    composerPreview.innerHTML = `<span class="material-symbols-outlined">description</span><span class="composer-preview-filename">${file.name}</span><button class="composer-preview-remove" id="preview-remove-file"><span class="material-symbols-outlined">close</span></button>`;
+    document.getElementById("preview-remove-file")?.addEventListener("click", () => { pendingFileUrl = ""; pendingFileName = ""; composerPreview.style.display = "none"; composerPreview.innerHTML = ""; fileInput.value = ""; });
+  });
+
+  const composerTitle = document.getElementById("composer-title");
+
+  postBtn?.addEventListener("click", async () => {
+    const title = composerTitle?.value?.trim() || "";
+    const content = composerTextarea?.value?.trim();
+    if (!content && !pendingImageUrl && !pendingFileUrl && !title) return;
+    postBtn.disabled = true;
+    postBtn.textContent = "Posting...";
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { postBtn.disabled = false; postBtn.textContent = "Post"; return; }
+    const { data, error } = await supabase
+      .from("posts")
+      .insert({
+        title: title,
+        content: content || "",
+        user_id: user.id,
+        image_url: pendingImageUrl,
+        file_url: pendingFileUrl,
+        file_name: pendingFileName,
+      })
+      .select("id, user_id, content, title, created_at, image_url, file_url, file_name")
+      .single();
+    if (error) { console.error(error); postBtn.disabled = false; postBtn.textContent = "Post"; return; }
+    // Prepend to feed
+    const { data: author } = await supabase
+      .from("profiles")
+      .select("id, username, display_name, avatar_url")
+      .eq("id", data.user_id)
+      .single();
+    const av = author?.avatar_url ? supabase.storage.from("avatars").getPublicUrl(author.avatar_url).data.publicUrl : null;
+    const mediaHtml = data.image_url ? `<img src="${data.image_url}" class="post-image" alt="" loading="lazy" />` : "";
+    const fileHtml = data.file_url ? `<a href="${data.file_url}" target="_blank" class="post-attach-link"><span class="material-symbols-outlined">description</span> ${data.file_name || "Attachment"}</a>` : "";
+    const titleHtml = data.title ? `<h4 class="post-title">${data.title.replace(/</g, "&lt;")}</h4>` : "";
+    const article = document.createElement("article");
+    article.className = "feed-post";
+    article.innerHTML = `
+      <div class="post-header">
+        <div class="post-author">
+          <div class="post-avatar">${av ? `<img src="${av}" alt="" class="post-avatar-img" />` : '<span class="material-symbols-outlined">account_circle</span>'}</div>
+          <div class="post-author-info">
+            <strong class="post-author-name">${author?.display_name || author?.username || "You"}</strong>
+            <span class="post-author-meta">just now</span>
+          </div>
+        </div>
+        <button class="post-menu-btn post-delete-btn" data-post-id="${data.id}" aria-label="Delete post"><span class="material-symbols-outlined">delete</span></button>
+      </div>
+      <div class="post-body">
+        ${titleHtml}
+        ${data.content ? `<p class="post-text">${data.content.replace(/</g, "&lt;")}</p>` : ""}
+        ${mediaHtml}
+        ${fileHtml}
+      </div>
+      <div class="post-actions">
+        <button class="post-action-btn post-like-btn" data-post-id="${data.id}" data-liked="false">
+          <span class="material-symbols-outlined post-like-icon">favorite_border</span>
+          <span class="post-like-count">0</span>
+        </button>
+      </div>
+    `;
+    article.querySelector(".post-delete-btn")?.addEventListener("click", deletePost);
+    feedPosts?.prepend(article);
+    // Remove empty state if present
+    const empty = feedPosts?.querySelector(".feed-empty");
+    if (empty) empty.remove();
+    composerTitle.value = "";
+    composerTextarea.value = "";
+    pendingImageUrl = "";
+    pendingFileUrl = "";
+    pendingFileName = "";
+    composerPreview.style.display = "none";
+    composerPreview.innerHTML = "";
+    imageInput.value = "";
+    fileInput.value = "";
+    overlay?.classList.remove("open");
+    postBtn.disabled = false;
+    postBtn.textContent = "Post";
+  });
+
+  // Delete post
+  async function deletePost(e) {
+    const btn = e.currentTarget;
+    const postId = btn.dataset.postId;
+    if (!confirm("Delete this post?")) return;
+    const { error } = await supabase.from("posts").delete().eq("id", postId);
+    if (error) { console.error(error); return; }
+    const article = btn.closest(".feed-post");
+    article?.remove();
+    // Show empty state if no posts left
+    if (feedPosts && !feedPosts.querySelector(".feed-post")) {
+      feedPosts.innerHTML = '<p class="feed-empty">No posts yet. Be the first to share your findings!</p>';
+    }
+  }
+
+  document.querySelectorAll(".post-delete-btn").forEach((btn) => {
+    btn.addEventListener("click", deletePost);
+  });
+
+  // Manual refresh - reloads feed data without full page refresh
+  const refreshBtn = document.getElementById("feed-refresh");
+  const feedPostsContainer = document.getElementById("feed-posts");
+
+  refreshBtn?.addEventListener("click", async () => {
+    refreshBtn.classList.add("spinning");
+    window.location.reload();
+  });
+
+  // Store current user ID for delete checks
+  let currentUserId = null;
+  supabase.auth.getUser().then(({ data }) => { currentUserId = data?.user?.id; });
+
+  // Like / unlike (event delegation, auth only)
+  if (!isGuest) {
+    document.getElementById("feed-posts")?.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".post-like-btn");
+      if (!btn) return;
+      const postId = btn.dataset.postId;
+      const liked = btn.dataset.liked === "true";
+      const icon = btn.querySelector(".post-like-icon");
+      const countEl = btn.querySelector(".post-like-count");
+      const supabase = createBrowserClient(
+        import.meta.env.PUBLIC_SUPABASE_URL,
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+      );
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      if (liked) {
+        const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", user.id);
+        if (error) { console.error(error); return; }
+        btn.dataset.liked = "false";
+        if (icon) icon.textContent = "favorite_border";
+        if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
+      } else {
+        const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: user.id });
+        if (error) { console.error(error); return; }
+        btn.dataset.liked = "true";
+        if (icon) icon.textContent = "favorite";
+        if (countEl) countEl.textContent = parseInt(countEl.textContent) + 1;
+      }
+    });
+  }
+</script>
+
+<style is:global>
+  .feed-content {
+    flex: 1;
+    max-width: 720px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Guest banner */
+  .guest-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    background: var(--color-surface-container-high);
+    color: var(--color-on-surface-variant);
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow-extruded-sm);
+  }
+  .guest-banner-icon {
+    font-size: 1.25rem;
+    color: var(--color-primary);
+  }
+  .guest-banner-link {
+    color: var(--color-primary);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .guest-banner-link:hover {
+    text-decoration: underline;
+  }
+
+  /* FAB */
+  .feed-fab {
+    position: fixed;
+    bottom: 5rem;
+    right: 2rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    border: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2), var(--shadow-extruded);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+    transition: all 0.2s;
+  }
+
+  .feed-fab:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25), var(--shadow-extruded);
+  }
+
+  .feed-fab .material-symbols-outlined {
+    font-size: 1.75rem;
+  }
+
+  /* Composer Overlay */
+  .feed-composer-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 60;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .feed-composer-overlay.open {
+    display: flex;
+  }
+
+  .feed-composer-modal {
+    background: var(--color-surface);
+    border-radius: var(--radius-default);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15), var(--shadow-extruded);
+    width: 100%;
+    max-width: 560px;
+    padding: 1.5rem;
+  }
+
+  .composer-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .composer-modal-header h3 {
+    font-family: var(--font-headline);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-on-surface);
+    margin: 0;
+  }
+
+  .composer-close-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: var(--color-surface-container-high);
+    color: var(--color-on-surface-variant);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .composer-close-btn:hover {
+    background: var(--color-surface-container-highest);
+    color: var(--color-on-surface);
+  }
+
+  .composer-textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 80px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.6;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--color-on-surface);
+    padding: 0;
+  }
+
+  .post-composer {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0;
+  }
+
+  .composer-avatar {
+    display: none;
+  }
+
+  .composer-input-area {
+    flex: 1;
+  }
+
+  .composer-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .composer-preview {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: var(--color-surface-container-high);
+    border-radius: 8px;
+    margin-top: 0.5rem;
+  }
+
+  .composer-preview-img {
+    max-height: 120px;
+    border-radius: 4px;
+    object-fit: cover;
+  }
+
+  .composer-preview-filename {
+    font-size: 13px;
+    color: var(--color-on-surface-variant);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .composer-preview-remove {
+    background: none;
+    border: none;
+    color: var(--color-error);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+  }
+
+  .post-image {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+    background: linear-gradient(90deg, var(--color-surface-container-high) 25%, var(--color-surface-container-highest) 50%, var(--color-surface-container-high) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .post-image[src] {
+    background: none;
+    animation: none;
+  }
+  .post-image-fallback {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface-container-high);
+    border-radius: 8px;
+    margin-top: 0.5rem;
+  }
+
+  .post-attach-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    background: var(--color-surface-container-high);
+    border-radius: 6px;
+    color: var(--color-primary);
+    font-size: 13px;
+    text-decoration: none;
+  }
+
+  .post-attach-link:hover {
+    background: var(--color-surface-container-highest);
+  }
+
+  .post-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--color-outline-variant, #e2e8f0);
+  }
+
+  .post-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: none;
+    border: none;
+    color: var(--color-on-surface-variant, #64748b);
+    font-family: Inter, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.15s;
+  }
+
+  .post-action-btn:hover {
+    background: var(--color-surface-container-high, #f1f5f9);
+    color: #e11d48;
+  }
+
+  .post-like-icon {
+    font-size: 18px !important;
+    transition: transform 0.15s;
+  }
+
+  .post-like-btn[data-liked="true"] {
+    color: #e11d48;
+  }
+  .post-like-btn[data-liked="true"] .post-like-icon {
+    font-variation-settings: "FILL" 1;
+  }
+
+  @media (max-width: 1024px) {
+    .feed-fab {
+      bottom: 5rem;
+      right: 1rem;
+      width: 50px;
+      height: 50px;
+    }
+    .feed-composer-modal {
+      margin: 1rem;
+      max-width: 100%;
+    }
+  }
+
+  .composer-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-recessed);
+  }
+
+  .composer-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .composer-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--color-surface-container-high);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-outline);
+  }
+
+  .composer-avatar-placeholder .material-symbols-outlined {
+    font-size: 1.25rem;
+  }
+
+  .composer-input-area {
+    flex: 1;
+  }
+
+  .composer-input {
+    width: 100%;
+    padding: 0.5rem 0;
+    border: none;
+    background: transparent;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--color-on-surface);
+    outline: none;
+  }
+
+  .composer-input::placeholder {
+    color: var(--color-outline);
+  }
+
+  .composer-title-input {
+    font-size: 16px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-outline-variant);
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  .composer-title-input::placeholder {
+    color: var(--color-outline);
+    font-weight: 400;
+  }
+
+  .composer-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .composer-action-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: var(--color-surface);
+    color: var(--color-outline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-extruded-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .composer-action-btn:hover {
+    color: var(--color-primary);
+    box-shadow: var(--shadow-extruded-hover);
+  }
+
+  .composer-action-btn:active {
+    box-shadow: var(--shadow-recessed);
+  }
+
+  .composer-action-btn .material-symbols-outlined {
+    font-size: 1.25rem;
+  }
+
+  .composer-post-btn {
+    padding: 0.5rem 1.25rem;
+    border: none;
+    border-radius: var(--radius-default);
+    background: var(--color-primary-container);
+    color: var(--color-on-primary-container);
+    font-family: var(--font-label);
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: var(--shadow-extruded-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .composer-post-btn:hover {
+    box-shadow: var(--shadow-extruded-hover);
+  }
+
+  .composer-post-btn:active {
+    box-shadow: var(--shadow-recessed);
+  }
+
+  .feed-posts {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .feed-empty {
+    text-align: center;
+    color: var(--color-outline);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    padding: 3rem 1rem;
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-extruded);
+  }
+
+  .feed-post {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-extruded);
+  }
+
+  .post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+
+  .post-author {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 8px;
+    padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+    margin: -0.25rem;
+    transition: background 0.15s;
+  }
+  .post-author:hover {
+    background: var(--color-surface-container-high);
+  }
+
+  .post-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--color-surface-container-high);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-outline);
+  }
+
+  .post-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+    color: var(--color-primary);
+  }
+
+  .post-avatar .material-symbols-outlined {
+    font-size: 1.5rem;
+  }
+
+  .post-author-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .post-author-name {
+    font-family: var(--font-label);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-on-surface);
+  }
+
+  .post-author-meta {
+    font-size: 12px;
+    color: var(--color-outline);
+  }
+
+  .post-menu-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-outline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .post-menu-btn:hover {
+    background: var(--color-surface-container-high);
+    color: var(--color-on-surface);
+  }
+
+  .post-delete-btn:hover {
+    color: var(--color-error) !important;
+    background: var(--color-error-container) !important;
+  }
+
+  .post-body {
+    margin-bottom: 1rem;
+  }
+
+  .post-title {
+    font-family: var(--font-headline);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-on-surface);
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+  }
+
+  .post-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--color-on-surface-variant);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .post-text.expanded {
+    -webkit-line-clamp: unset;
+  }
+  .post-seemore {
+    background: none;
+    border: none;
+    color: #006a67;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 2px 0;
+    font-family: "Inter", sans-serif;
+  }
+  .post-seemore:hover {
+    text-decoration: underline;
+  }
+
+  .post-tags {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .post-tag {
+    font-family: var(--font-label);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-primary);
+    background: var(--color-surface-container-high);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+  }
+
+  .post-stats {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-outline-variant);
+  }
+
+  .post-stat-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: none;
+    background: transparent;
+    color: var(--color-outline);
+    font-family: var(--font-label);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-default);
+    transition: all 0.15s;
+  }
+
+  .post-stat-btn:hover {
+    color: var(--color-primary);
+    background: var(--color-surface-container-high);
+  }
+
+  .post-stat-btn .material-symbols-outlined {
+    font-size: 1.25rem;
+  }
+
+  /* New Scholars section */
+  .feed-newusers {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .feed-newusers::-webkit-scrollbar { display: none; }
+
+  .feed-newusers-label {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-outline);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .feed-newusers-list {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .feed-newuser-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.6rem 0.3rem 0.3rem;
+    border-radius: 9999px;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-extruded);
+    text-decoration: none;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+
+  .feed-newuser-item:hover {
+    background: var(--color-surface-container-high);
+  }
+
+  .feed-newuser-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .feed-newuser-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface-variant);
+    color: var(--color-outline);
+  }
+
+  .feed-newuser-placeholder .material-symbols-outlined {
+    font-size: 16px !important;
+  }
+
+  .feed-newuser-name {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-on-surface);
+    white-space: nowrap;
+  }
+
+  /* Top search bar */
+  .top-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: 0.5rem 1rem;
+    box-shadow: var(--shadow-extruded);
+    margin-bottom: 1rem;
+  }
+
+  .top-search-icon {
+    font-size: 1.25rem;
+    color: var(--color-outline);
+    flex-shrink: 0;
+  }
+
+  .top-search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--color-on-surface);
+    padding: 0.25rem 0;
+  }
+
+  .top-search-input::placeholder {
+    color: var(--color-outline);
+  }
+
+  .top-search-clear {
+    display: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: var(--color-surface-container-high);
+    color: var(--color-on-surface-variant);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .top-search-clear .material-symbols-outlined {
+    font-size: 14px;
+  }
+
+  .feed-refresh-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: var(--color-surface);
+    color: var(--color-outline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-extruded-sm);
+    transition: all 0.15s;
+  }
+  .feed-refresh-btn:hover {
+    color: var(--color-primary);
+    box-shadow: var(--shadow-extruded-hover);
+  }
+  .feed-refresh-btn.spinning .material-symbols-outlined {
+    animation: feed-spin 0.6s linear infinite;
+  }
+  @keyframes feed-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .top-search-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-surface);
+    border-radius: var(--radius-default);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12), var(--shadow-extruded);
+    z-index: 100;
+    padding: 0.5rem;
+    margin-top: 4px;
+    max-height: 380px;
+    overflow-y: auto;
+  }
+
+  .top-search-dropdown.open {
+    display: block;
+  }
+
+  .tsd-status {
+    font-size: 13px;
+    color: var(--color-outline);
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .tsd-error {
+    color: var(--color-error);
+  }
+
+  .tsd-group-title {
+    font-family: var(--font-label);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.35rem 0.5rem 0.25rem;
+  }
+
+  .tsd-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem;
+    border-radius: var(--radius-default);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .tsd-item:hover {
+    background: var(--color-surface-container-high);
+  }
+
+  .tsd-avatar-img,
+  .tsd-avatar-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .tsd-avatar-placeholder {
+    background: var(--color-primary-container);
+    color: var(--color-on-primary-container);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-label);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .tsd-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+
+  .tsd-name {
+    font-family: var(--font-label);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-on-surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tsd-meta {
+    font-size: 11px;
+    color: var(--color-outline);
+  }
+
+  .tsd-chips {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+    margin-top: 0.1rem;
+  }
+
+  .tsd-chip {
+    font-family: var(--font-label);
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--color-primary);
+    background: var(--color-surface-container-high);
+    padding: 0.1rem 0.45rem;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+  }
+
+  /* Profile viewer modal */
+  .profile-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 70;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .profile-overlay.open {
+    display: flex;
+  }
+
+  .profile-modal {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15), var(--shadow-extruded);
+    width: 100%;
+    max-width: 440px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 1.5rem;
+  }
+
+  .profile-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+
+  .profile-modal-header h3 {
+    font-family: var(--font-headline);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-on-surface);
+    margin: 0;
+  }
+
+  .profile-close-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: var(--color-surface-container-high);
+    color: var(--color-on-surface-variant);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .profile-close-btn:hover {
+    background: var(--color-surface-container-highest);
+    color: var(--color-on-surface);
+  }
+
+  .pv-hero {
+    text-align: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-outline-variant);
+    margin-bottom: 1rem;
+  }
+
+  .pv-avatar {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 0.75rem;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: var(--shadow-extruded);
+  }
+
+  .pv-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .pv-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--color-surface-container-high);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-outline);
+  }
+
+  .pv-avatar-placeholder .material-symbols-outlined {
+    font-size: 2rem;
+  }
+
+  .pv-name {
+    font-family: var(--font-headline);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-on-surface);
+    margin: 0 0 0.15rem;
+  }
+
+  .pv-username {
+    font-size: 13px;
+    color: var(--color-outline);
+  }
+
+  .pv-campus {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+    font-size: 12px;
+    color: var(--color-on-surface-variant);
+  }
+
+  .pv-campus .material-symbols-outlined {
+    font-size: 14px;
+  }
+
+  .pv-section {
+    margin-bottom: 1rem;
+  }
+
+  .pv-section-title {
+    font-family: var(--font-label);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.5rem;
+  }
+
+  .pv-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .pv-chip {
+    font-family: var(--font-label);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-primary);
+    background: var(--color-surface-container-high);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+  }
+
+  .pv-achievements {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .pv-achievement {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 13px;
+    color: var(--color-on-surface-variant);
+    line-height: 1.4;
+  }
+
+  .pv-achievement-icon {
+    font-size: 16px;
+    color: var(--color-primary);
+    flex-shrink: 0;
+  }
+
+  .pv-actions {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-outline-variant);
+  }
+
+  .pv-view-btn {
+    display: block;
+    text-align: center;
+    padding: 0.6rem;
+    border-radius: var(--radius-default);
+    background: var(--color-primary-container);
+    color: var(--color-on-primary-container);
+    font-family: var(--font-label);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: var(--shadow-extruded);
+    transition: all 0.15s;
+  }
+
+  .pv-view-btn:hover {
+    box-shadow: var(--shadow-extruded-hover);
+    text-decoration: none;
+  }
+
+  @media (max-width: 768px) {
+    .post-composer {
+      flex-wrap: wrap;
+    }
+    .composer-actions {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  }
+</style>

@@ -1,0 +1,302 @@
+---
+import FeedView from "./FeedView.astro";
+import PortfolioView from "./PortfolioView.astro";
+import EventsView from "./EventsView.astro";
+import SplashScreen from "./SplashScreen.astro";
+
+export interface Props {
+  profile: any;
+  sessionUser: any;
+  avatarUrl: string | null;
+  postsWithAuthors: any[];
+  newUsers: any[];
+  likeCountMap: Map<string, number>;
+  likedPosts: Set<string>;
+  isGuest: boolean;
+  // Portfolio props
+  dastharUrl: string | null;
+  campusName: string;
+  mentorName: string;
+  portfolioUrl: string;
+  userPosts: any[];
+  portfolioLikeMap: Map<string, number>;
+  portfolioLikedPosts: Set<string>;
+  milestones: { title: string; issuer: string; url: string }[];
+  socialLinks: { platform: string; value: string }[];
+  projectTitle: string;
+  projectDescription: string;
+  projectProgress: number;
+  repoUrl: string;
+  deployUrl: string;
+  legacyAchievements: string[];
+  // Events props
+  events: any[];
+  registeredIds: Set<string>;
+  featuredEvent: any | null;
+  upNextEvents: any[];
+  gridEvents: any[];
+  myCalendarEvents: any[];
+  pastEvents: any[];
+}
+
+const {
+  profile,
+  sessionUser,
+  avatarUrl,
+  postsWithAuthors,
+  newUsers,
+  likeCountMap,
+  likedPosts,
+  isGuest,
+  dastharUrl,
+  campusName,
+  mentorName,
+  portfolioUrl,
+  userPosts,
+  portfolioLikeMap,
+  portfolioLikedPosts,
+  milestones,
+  socialLinks,
+  projectTitle,
+  projectDescription,
+  projectProgress,
+  repoUrl,
+  deployUrl,
+  legacyAchievements,
+  events,
+  registeredIds,
+  featuredEvent,
+  upNextEvents,
+  gridEvents,
+  myCalendarEvents,
+  pastEvents,
+} = Astro.props;
+
+// Compute isOwner / isAlumni / etc server-side
+const isOwner = sessionUser?.id === profile?.id;
+const isApproved = profile?.is_approved ?? false;
+const jobTitle = profile?.job_title || "";
+const organisation = profile?.organisation || "";
+const isAlumni = !!(jobTitle && organisation);
+const academicTier = profile?.academic_tier || "";
+const courseName = profile?.course_name || "";
+const techStack: string[] = profile?.tech_stack || [];
+const githubHandle = profile?.github_handle || "";
+const linkedinUrl = profile?.linkedin_url || "";
+const isOwnerBool = isOwner;
+const isApprovedBool = isApproved;
+const isAlumniBool = isAlumni;
+const jobTitleStr = jobTitle;
+const orgStr = organisation;
+const academicTierStr = academicTier;
+const courseNameStr = courseName;
+const techStackArr = techStack;
+---
+
+<div class="shell-root">
+  <SplashScreen autoHide={2500} />
+
+  <!-- Tab Panels -->
+  <div class="shell-viewport" id="shell-viewport">
+    <div class="shell-panel" data-tab="feed">
+      <FeedView
+        profile={profile}
+        sessionUser={sessionUser}
+        avatarUrl={avatarUrl}
+        postsWithAuthors={postsWithAuthors}
+        newUsers={newUsers}
+        likeCountMap={likeCountMap}
+        likedPosts={likedPosts}
+        isGuest={isGuest}
+      />
+    </div>
+    <div class="shell-panel" data-tab="portfolio" style="display:none">
+      <PortfolioView
+        profile={profile}
+        sessionUser={sessionUser}
+        isOwner={isOwnerBool}
+        isApproved={isApprovedBool}
+        avatarUrl={avatarUrl}
+        dastharUrl={dastharUrl}
+        campusName={campusName}
+        mentorName={mentorName}
+        portfolioUrl={portfolioUrl}
+        userPosts={userPosts}
+        portfolioLikeMap={portfolioLikeMap}
+        portfolioLikedPosts={portfolioLikedPosts}
+        milestones={milestones}
+        socialLinks={socialLinks}
+        projectTitle={projectTitle}
+        projectDescription={projectDescription}
+        projectProgress={projectProgress}
+        githubHandle={githubHandle}
+        linkedinUrl={linkedinUrl}
+        academicTier={academicTierStr}
+        courseName={courseNameStr}
+        jobTitle={jobTitleStr}
+        organisation={orgStr}
+        isAlumni={isAlumniBool}
+        techStack={techStackArr}
+        repoUrl={repoUrl}
+        deployUrl={deployUrl}
+        legacyAchievements={legacyAchievements}
+      />
+    </div>
+    <div class="shell-panel" data-tab="events" style="display:none">
+      <EventsView
+        profile={profile}
+        avatarUrl={avatarUrl}
+        events={events}
+        registeredIds={registeredIds}
+        featuredEvent={featuredEvent}
+        upNextEvents={upNextEvents}
+        gridEvents={gridEvents}
+        myCalendarEvents={myCalendarEvents}
+        pastEvents={pastEvents}
+      />
+    </div>
+  </div>
+
+  <!-- Bottom Tab Navigation -->
+  <nav class="shell-bottom-nav" id="shell-bottom-nav">
+    <button class="shell-nav-item active" data-tab="feed">
+      <span class="material-symbols-outlined">dynamic_feed</span>
+      <span>Feed</span>
+    </button>
+    <button class="shell-nav-item" data-tab="portfolio">
+      <span class="material-symbols-outlined">account_circle</span>
+      <span>Portfolio</span>
+    </button>
+    <button class="shell-nav-item" data-tab="events">
+      <span class="material-symbols-outlined">event</span>
+      <span>Events</span>
+    </button>
+    <a href="/dashboard/settings" class="shell-nav-item">
+      <span class="material-symbols-outlined">settings</span>
+      <span>Settings</span>
+    </a>
+  </nav>
+</div>
+
+<script>
+  (function() {
+    const panels = document.querySelectorAll(".shell-panel");
+    const navItems = document.querySelectorAll(".shell-nav-item[data-tab]");
+
+    function switchTab(tab) {
+      // Toggle panels
+      panels.forEach((p) => {
+        p.style.display = p.dataset.tab === tab ? "" : "none";
+      });
+      // Toggle nav active state
+      navItems.forEach((item) => {
+        item.classList.toggle("active", item.dataset.tab === tab);
+      });
+    }
+
+    navItems.forEach((item) => {
+      item.addEventListener("click", (e) => {
+        const tab = item.dataset.tab;
+        if (tab) {
+          e.preventDefault();
+          switchTab(tab);
+        }
+      });
+    });
+
+    // Splash: auto-hide after timeout
+    const splash = document.querySelector(".splash-overlay");
+    if (splash) {
+      const delay = parseInt(splash.dataset.autoHide, 10) || 2500;
+      setTimeout(() => {
+        splash.classList.add("splash-hidden");
+        setTimeout(() => { splash.style.display = "none"; }, 500);
+      }, delay);
+    }
+  })();
+</script>
+
+<style is:global>
+  /* Shell root */
+  .shell-root {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: var(--color-background, #F0F2F5);
+    position: relative;
+  }
+
+  /* Viewport — scrollable area between top and bottom nav */
+  .shell-viewport {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 5rem;
+  }
+
+  .shell-panel {
+    min-height: 100%;
+  }
+
+  /* ── Bottom Navigation ── */
+  .shell-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: var(--color-surface, #FFFFFF);
+    border-top: 1px solid var(--color-outline-variant, #E2E8F0);
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.06);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0.35rem 0;
+  }
+
+  .shell-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: none;
+    border: none;
+    color: var(--color-outline, #94A3B8);
+    font-family: var(--font-label, Inter, sans-serif);
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    transition: color 0.2s;
+    text-decoration: none;
+    border-radius: 8px;
+  }
+
+  .shell-nav-item:hover {
+    color: var(--color-primary, #0D9488);
+  }
+
+  .shell-nav-item.active {
+    color: var(--color-primary, #0D9488);
+  }
+
+  .shell-nav-item .material-symbols-outlined {
+    font-size: 24px !important;
+  }
+
+  /* Override feed viewport so it doesn't add its own padding-bottom */
+  .feed-view-content .feed-content {
+    padding-bottom: 0;
+  }
+
+  /* Hide desktop-only elements */
+  @media (min-width: 769px) {
+    .shell-bottom-nav {
+      display: none;
+    }
+    .shell-viewport {
+      padding-bottom: 0;
+    }
+  }
+</style>

@@ -1,0 +1,177 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import MobileAppShell from "../components/MobileAppShell.astro";
+import { createClient } from "../lib/supabase";
+import { getProfile, getSessionUser } from "../lib/auth";
+
+const supabase = createClient({ request: Astro.request, cookies: Astro.cookies });
+const sessionUser = await getSessionUser(supabase);
+const profile = await getProfile(supabase);
+
+const isGuest = !profile;
+const avatarUrl = profile?.avatar_url
+  ? supabase.storage.from("avatars").getPublicUrl(profile.avatar_url).data.publicUrl
+  : null;
+const dastharUrl = profile?.dasthar_url
+  ? supabase.storage.from("dasthar").getPublicUrl(profile.dasthar_url).data.publicUrl
+  : null;
+const campusName = profile?.campuses?.name ?? "";
+const mentorName = profile?.mentors?.name || profile?.mentor_name;
+const portfolioUrl = profile ? `${Astro.url.origin}/dashboard?user=${profile.id}` : "";
+
+// ── Feed data ──
+const { data: newUsers } = await supabase
+  .from("profiles")
+  .select("id, username, display_name, avatar_url, legal_name")
+  .order("created_at", { ascending: false })
+  .limit(3);
+
+const { data: posts } = await supabase
+  .from("posts")
+  .select("id, user_id, content, title, created_at, image_url, file_url, file_name")
+  .order("created_at", { ascending: false })
+  .limit(50);
+
+const authorIds = [...new Set((posts || []).map((p) => p.user_id))];
+const { data: authors } = authorIds.length
+  ? await supabase.from("profiles").select("id, username, display_name, avatar_url").in("id", authorIds)
+  : { data: [] };
+const authorMap = new Map((authors || []).map((a) => [a.id, a]));
+const postsWithAuthors = (posts || []).map((p) => ({ ...p, author: authorMap.get(p.user_id) || null }));
+
+for (let i = postsWithAuthors.length - 1; i > 0; i--) {
+  const j = Math.floor(Math.random() * (i + 1));
+  [postsWithAuthors[i], postsWithAuthors[j]] = [postsWithAuthors[j], postsWithAuthors[i]];
+}
+
+const postIds = (posts || []).map((p) => p.id);
+const { data: likeCounts } = postIds.length
+  ? await supabase.from("post_likes").select("post_id").in("post_id", postIds)
+  : { data: [] };
+const likeCountMap = new Map<string, number>();
+(likeCounts || []).forEach((l) => {
+  likeCountMap.set(l.post_id, (likeCountMap.get(l.post_id) || 0) + 1);
+});
+let likedPosts = new Set<string>();
+if (sessionUser && postIds.length) {
+  const { data: myLikes } = await supabase
+    .from("post_likes")
+    .select("post_id")
+    .in("post_id", postIds)
+    .eq("user_id", sessionUser.id);
+  likedPosts = new Set((myLikes || []).map((l) => l.post_id));
+}
+
+// ── Portfolio data ──
+const projectTitle = profile?.project_title || "";
+const projectDescription = profile?.project_description || "";
+const projectProgress = profile?.project_progress || 0;
+const githubHandle = profile?.github_handle || "";
+const linkedinUrl = profile?.linkedin_url || "";
+const academicTier = profile?.academic_tier || "";
+const courseName = profile?.course_name || "";
+const jobTitle = profile?.job_title || "";
+const organisation = profile?.organisation || "";
+const techStack: string[] = profile?.tech_stack || [];
+const repoUrl = profile?.repo_url || "";
+const deployUrl = profile?.deploy_url || "";
+
+let milestones: { title: string; issuer: string; url: string }[] = [];
+try {
+  milestones = typeof profile?.milestones === "string"
+    ? JSON.parse(profile.milestones)
+    : (profile?.milestones || []);
+} catch { milestones = []; }
+
+let socialLinks: { platform: string; value: string }[] = [];
+try {
+  socialLinks = typeof profile?.social_links === "string"
+    ? JSON.parse(profile.social_links)
+    : (profile?.social_links || []);
+} catch {}
+
+const legacyAchievements: string[] = profile?.achievements
+  ? profile.achievements.split("\n").filter(Boolean)
+  : [];
+
+const { data: userPosts } = profile
+  ? await supabase
+      .from("posts")
+      .select("id, content, title, created_at, image_url, file_url, file_name")
+      .eq("user_id", profile.id)
+      .order("created_at", { ascending: false })
+      .limit(20)
+  : { data: [] };
+
+const userPostIds = (userPosts || []).map((p) => p.id);
+const { data: upLikes } = userPostIds.length
+  ? await supabase.from("post_likes").select("post_id").in("post_id", userPostIds)
+  : { data: [] };
+const portfolioLikeMap = new Map<string, number>();
+(upLikes || []).forEach((l) => {
+  portfolioLikeMap.set(l.post_id, (portfolioLikeMap.get(l.post_id) || 0) + 1);
+});
+let portfolioLikedPosts = new Set<string>();
+if (sessionUser && userPostIds.length) {
+  const { data: myUpLikes } = await supabase
+    .from("post_likes")
+    .select("post_id")
+    .in("post_id", userPostIds)
+    .eq("user_id", sessionUser.id);
+  portfolioLikedPosts = new Set((myUpLikes || []).map((l) => l.post_id));
+}
+
+// ── Events data ──
+const { data: events } = profile
+  ? await supabase.from("events").select("*").order("event_date", { ascending: true })
+  : { data: [] };
+const { data: registrations } = profile
+  ? await supabase.from("event_registrations").select("event_id").eq("user_id", profile.id)
+  : { data: [] };
+
+const registeredIds = new Set((registrations || []).map((r) => r.event_id));
+const now = new Date().toISOString();
+const allEvents = events || [];
+const upcomingEvents = allEvents.filter((e) => e.event_date >= now);
+const pastEvents = allEvents.filter((e) => e.event_date < now);
+const liveEvent = upcomingEvents.find((e) => e.is_live);
+const featuredEvent = liveEvent || upcomingEvents[0] || null;
+const upNextEvents = upcomingEvents.slice(1, 4);
+const gridEvents = upcomingEvents.filter((e) => !featuredEvent || e.id !== featuredEvent.id);
+const myCalendarEvents = allEvents.filter((e) => registeredIds.has(e.id) && e.event_date >= now);
+---
+
+<BaseLayout title="Science Orbit">
+  <MobileAppShell
+    profile={profile}
+    sessionUser={sessionUser}
+    avatarUrl={avatarUrl}
+    postsWithAuthors={postsWithAuthors}
+    newUsers={newUsers || []}
+    likeCountMap={likeCountMap}
+    likedPosts={likedPosts}
+    isGuest={isGuest}
+    dastharUrl={dastharUrl}
+    campusName={campusName}
+    mentorName={mentorName}
+    portfolioUrl={portfolioUrl}
+    userPosts={userPosts || []}
+    portfolioLikeMap={portfolioLikeMap}
+    portfolioLikedPosts={portfolioLikedPosts}
+    milestones={milestones}
+    socialLinks={socialLinks}
+    projectTitle={projectTitle}
+    projectDescription={projectDescription}
+    projectProgress={projectProgress}
+    repoUrl={repoUrl}
+    deployUrl={deployUrl}
+    legacyAchievements={legacyAchievements}
+    events={allEvents}
+    registeredIds={registeredIds}
+    featuredEvent={featuredEvent}
+    upNextEvents={upNextEvents}
+    gridEvents={gridEvents}
+    myCalendarEvents={myCalendarEvents}
+    pastEvents={pastEvents}
+  />
+</BaseLayout>
