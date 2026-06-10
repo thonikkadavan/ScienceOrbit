@@ -98,11 +98,11 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
           <!-- ===== STEP 4 ===== -->
           <div class="step-panel" data-step="4" style="display:none">
-            <div class="form-group" style="margin-bottom: -15px; padding-top: 8px;">
+            <div class="form-group">
               <label for="achievements">Achievements (credential URL)</label>
               <input type="url" id="achievements" placeholder="Link to a certificate, award, or credential you hold." />
             </div>
-            <div class="form-group" style="margin-bottom: -5px;">
+            <div class="form-group">
               <label for="biography">Biography / Academic Statement</label>
               <textarea id="biography" maxlength="400" rows="3" placeholder="Briefly state your core scientific interests, research objectives, or current focus fields within the Madeenathunnoor community..."></textarea>
               <div class="char-counter"><span id="bio-count">0</span> / 400</div>
@@ -115,7 +115,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <label for="organisation">Organisation</label>
               <input type="text" id="organisation" placeholder="e.g. Calicut University" />
             </div>
-            <div class="step-actions" style="margin-top:55px">
+            <div class="step-actions">
               <button type="button" class="btn-neu btn-prev" data-prev="3">← Back</button>
               <button type="button" class="btn-neu btn-skip" data-next="5">Skip</button>
               <button type="button" class="btn-neu btn-next" data-next="5">Next Step →</button>
