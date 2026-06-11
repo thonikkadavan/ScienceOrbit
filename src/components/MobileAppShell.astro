@@ -2,176 +2,117 @@
 import FeedView from "./FeedView.astro";
 import PortfolioView from "./PortfolioView.astro";
 import EventsView from "./EventsView.astro";
-import SplashScreen from "./SplashScreen.astro";
+import type { Database } from "../types/database";
 
 export interface Props {
-  profile: any;
   sessionUser: any;
+  profile: any;
   avatarUrl: string | null;
-  postsWithAuthors: any[];
   newUsers: any[];
+  postsWithAuthors: any[];
   likeCountMap: Map<string, number>;
   likedPosts: Set<string>;
-  isGuest: boolean;
-  // Portfolio props
+  isOwner: boolean;
+  isApproved: boolean;
   dastharUrl: string | null;
   campusName: string;
   mentorName: string;
   portfolioUrl: string;
-  userPosts: any[];
-  portfolioLikeMap: Map<string, number>;
-  portfolioLikedPosts: Set<string>;
-  milestones: { title: string; issuer: string; url: string }[];
-  socialLinks: { platform: string; value: string }[];
   projectTitle: string;
   projectDescription: string;
   projectProgress: number;
+  githubHandle: string;
+  linkedinUrl: string;
+  academicTier: string;
+  courseName: string;
+  jobTitle: string;
+  organisation: string;
+  isAlumni: boolean;
+  techStack: string[];
   repoUrl: string;
   deployUrl: string;
+  milestones: { title: string; issuer: string; url: string }[];
+  socialLinks: { platform: string; value: string }[];
   legacyAchievements: string[];
-  // Events props
+  userPosts: any[];
+  portfolioLikeMap: Map<string, number>;
+  portfolioLikedPosts: Set<string>;
   events: any[];
   registeredIds: Set<string>;
-  featuredEvent: any | null;
+  featuredEvent: any;
   upNextEvents: any[];
   gridEvents: any[];
   myCalendarEvents: any[];
   pastEvents: any[];
+  liveEvent: any;
 }
-
-const {
-  profile,
-  sessionUser,
-  avatarUrl,
-  postsWithAuthors,
-  newUsers,
-  likeCountMap,
-  likedPosts,
-  isGuest,
-  dastharUrl,
-  campusName,
-  mentorName,
-  portfolioUrl,
-  userPosts,
-  portfolioLikeMap,
-  portfolioLikedPosts,
-  milestones,
-  socialLinks,
-  projectTitle,
-  projectDescription,
-  projectProgress,
-  repoUrl,
-  deployUrl,
-  legacyAchievements,
-  events,
-  registeredIds,
-  featuredEvent,
-  upNextEvents,
-  gridEvents,
-  myCalendarEvents,
-  pastEvents,
-} = Astro.props;
-
-// Compute isOwner / isAlumni / etc server-side
-const isOwner = sessionUser?.id === profile?.id;
-const isApproved = profile?.is_approved ?? false;
-const jobTitle = profile?.job_title || "";
-const organisation = profile?.organisation || "";
-const isAlumni = !!(jobTitle && organisation);
-const academicTier = profile?.academic_tier || "";
-const courseName = profile?.course_name || "";
-const techStack: string[] = profile?.tech_stack || [];
-const githubHandle = profile?.github_handle || "";
-const linkedinUrl = profile?.linkedin_url || "";
-const isOwnerBool = isOwner;
-const isApprovedBool = isApproved;
-const isAlumniBool = isAlumni;
-const jobTitleStr = jobTitle;
-const orgStr = organisation;
-const academicTierStr = academicTier;
-const courseNameStr = courseName;
-const techStackArr = techStack;
 ---
 
-<div class="shell-root">
-  <SplashScreen autoHide={2500} />
+<div class="sv-shell">
+  <FeedView
+    profile={Astro.props.profile}
+    sessionUser={Astro.props.sessionUser}
+    avatarUrl={Astro.props.avatarUrl}
+    newUsers={Astro.props.newUsers}
+    postsWithAuthors={Astro.props.postsWithAuthors}
+    likeCountMap={Astro.props.likeCountMap}
+    likedPosts={Astro.props.likedPosts}
+  />
+  <PortfolioView
+    profile={Astro.props.profile}
+    isOwner={Astro.props.isOwner}
+    isApproved={Astro.props.isApproved}
+    avatarUrl={Astro.props.avatarUrl}
+    dastharUrl={Astro.props.dastharUrl}
+    campusName={Astro.props.campusName}
+    mentorName={Astro.props.mentorName}
+    portfolioUrl={Astro.props.portfolioUrl}
+    projectTitle={Astro.props.projectTitle}
+    projectDescription={Astro.props.projectDescription}
+    projectProgress={Astro.props.projectProgress}
+    githubHandle={Astro.props.githubHandle}
+    linkedinUrl={Astro.props.linkedinUrl}
+    academicTier={Astro.props.academicTier}
+    courseName={Astro.props.courseName}
+    jobTitle={Astro.props.jobTitle}
+    organisation={Astro.props.organisation}
+    isAlumni={Astro.props.isAlumni}
+    techStack={Astro.props.techStack}
+    repoUrl={Astro.props.repoUrl}
+    deployUrl={Astro.props.deployUrl}
+    milestones={Astro.props.milestones}
+    socialLinks={Astro.props.socialLinks}
+    legacyAchievements={Astro.props.legacyAchievements}
+    userPosts={Astro.props.userPosts}
+    portfolioLikeMap={Astro.props.portfolioLikeMap}
+    portfolioLikedPosts={Astro.props.portfolioLikedPosts}
+  />
+  <EventsView
+    profile={Astro.props.profile}
+    events={Astro.props.events}
+    registeredIds={Astro.props.registeredIds}
+    featuredEvent={Astro.props.featuredEvent}
+    upNextEvents={Astro.props.upNextEvents}
+    gridEvents={Astro.props.gridEvents}
+    myCalendarEvents={Astro.props.myCalendarEvents}
+    pastEvents={Astro.props.pastEvents}
+    liveEvent={Astro.props.liveEvent}
+  />
 
-  <!-- Tab Panels -->
-  <div class="shell-viewport" id="shell-viewport">
-    <div class="shell-panel" data-tab="feed">
-      <FeedView
-        profile={profile}
-        sessionUser={sessionUser}
-        avatarUrl={avatarUrl}
-        postsWithAuthors={postsWithAuthors}
-        newUsers={newUsers}
-        likeCountMap={likeCountMap}
-        likedPosts={likedPosts}
-        isGuest={isGuest}
-      />
-    </div>
-    <div class="shell-panel" data-tab="portfolio" style="display:none">
-      <PortfolioView
-        profile={profile}
-        sessionUser={sessionUser}
-        isOwner={isOwnerBool}
-        isApproved={isApprovedBool}
-        avatarUrl={avatarUrl}
-        dastharUrl={dastharUrl}
-        campusName={campusName}
-        mentorName={mentorName}
-        portfolioUrl={portfolioUrl}
-        userPosts={userPosts}
-        portfolioLikeMap={portfolioLikeMap}
-        portfolioLikedPosts={portfolioLikedPosts}
-        milestones={milestones}
-        socialLinks={socialLinks}
-        projectTitle={projectTitle}
-        projectDescription={projectDescription}
-        projectProgress={projectProgress}
-        githubHandle={githubHandle}
-        linkedinUrl={linkedinUrl}
-        academicTier={academicTierStr}
-        courseName={courseNameStr}
-        jobTitle={jobTitleStr}
-        organisation={orgStr}
-        isAlumni={isAlumniBool}
-        techStack={techStackArr}
-        repoUrl={repoUrl}
-        deployUrl={deployUrl}
-        legacyAchievements={legacyAchievements}
-      />
-    </div>
-    <div class="shell-panel" data-tab="events" style="display:none">
-      <EventsView
-        profile={profile}
-        avatarUrl={avatarUrl}
-        events={events}
-        registeredIds={registeredIds}
-        featuredEvent={featuredEvent}
-        upNextEvents={upNextEvents}
-        gridEvents={gridEvents}
-        myCalendarEvents={myCalendarEvents}
-        pastEvents={pastEvents}
-      />
-    </div>
-  </div>
-
-  <!-- Bottom Tab Navigation -->
-  <nav class="shell-bottom-nav" id="shell-bottom-nav">
-    <button class="shell-nav-item active" data-tab="feed">
+  <nav class="sv-bottom-nav">
+    <button class="sv-bnav-item active" data-tab="feed">
       <span class="material-symbols-outlined">dynamic_feed</span>
       <span>Feed</span>
     </button>
-    <button class="shell-nav-item" data-tab="portfolio">
+    <button class="sv-bnav-item" data-tab="portfolio">
       <span class="material-symbols-outlined">account_circle</span>
       <span>Portfolio</span>
     </button>
-    <button class="shell-nav-item" data-tab="events">
+    <button class="sv-bnav-item" data-tab="events">
       <span class="material-symbols-outlined">event</span>
       <span>Events</span>
     </button>
-    <a href="/dashboard/settings" class="shell-nav-item">
+    <a href="/dashboard/settings" class="sv-bnav-item">
       <span class="material-symbols-outlined">settings</span>
       <span>Settings</span>
     </a>
@@ -179,124 +120,622 @@ const techStackArr = techStack;
 </div>
 
 <script>
-  (function() {
-    const panels = document.querySelectorAll(".shell-panel");
-    const navItems = document.querySelectorAll(".shell-nav-item[data-tab]");
+import { createBrowserClient } from "@supabase/ssr";
 
-    function switchTab(tab) {
-      // Toggle panels
-      panels.forEach((p) => {
-        p.style.display = p.dataset.tab === tab ? "" : "none";
-      });
-      // Toggle nav active state
-      navItems.forEach((item) => {
-        item.classList.toggle("active", item.dataset.tab === tab);
-      });
+const supabase = createBrowserClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+);
+
+// ── Tab Router ──
+window.switchTab = function (tabId) {
+  document.querySelectorAll(".sv-panel").forEach((p) => {
+    p.classList.toggle("sv-panel--active", p.id === tabId + "-panel");
+  });
+  document.querySelectorAll(".sv-bnav-item").forEach((b) => {
+    b.classList.toggle("active", b.dataset.tab === tabId);
+  });
+};
+
+document.addEventListener("click", (e) => {
+  const navBtn = e.target.closest(".sv-bnav-item[data-tab]");
+  if (navBtn) {
+    e.preventDefault();
+    window.switchTab(navBtn.dataset.tab);
+  }
+});
+
+// ── Search ──
+const searchInput = document.getElementById("sv-top-search");
+const searchDropdown = document.getElementById("sv-top-search-dropdown");
+const searchClear = document.getElementById("sv-top-search-clear");
+
+if (searchInput) {
+  let searchTimer;
+  searchInput.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    const q = searchInput.value.trim();
+    if (!q) { searchDropdown.innerHTML = ""; searchDropdown.classList.remove("active"); return; }
+    searchTimer = setTimeout(async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url, subjects, achievements, campuses(name)")
+        .eq("is_approved", true)
+        .or(`username.ilike.%${q}%,display_name.ilike.%${q}%,legal_name.ilike.%${q}%`)
+        .limit(6);
+      if (!data || data.length === 0) {
+        searchDropdown.innerHTML = '<div class="sv-search-noresult">No results found</div>';
+      } else {
+        searchDropdown.innerHTML = data.map((u) => {
+          const subj = Array.isArray(u.subjects) ? u.subjects.slice(0, 2).join(", ") : "";
+          const campus = u.campuses?.name || "";
+          return `<a href="/dashboard?user=${u.id}" class="sv-search-result-item">
+            <div class="sv-search-result-avatar">${u.avatar_url ? `<img src="${supabase.storage.from("avatars").getPublicUrl(u.avatar_url).data.publicUrl}" />` : '<span class="material-symbols-outlined">person</span>'}</div>
+            <div class="sv-search-result-info"><strong>${u.display_name || u.username}</strong>${campus ? `<span>${campus}</span>` : ""}${subj ? `<span>${subj}</span>` : ""}</div>
+          </a>`;
+        }).join("");
+      }
+      searchDropdown.classList.add("active");
+    }, 300);
+  });
+
+  searchClear?.addEventListener("click", () => {
+    if (searchInput) { searchInput.value = ""; searchInput.focus(); }
+    if (searchDropdown) { searchDropdown.innerHTML = ""; searchDropdown.classList.remove("active"); }
+  });
+}
+
+// ── Post Composer ──
+const fabAdd = document.getElementById("sv-fab-add");
+const composerOverlay = document.getElementById("sv-composer-overlay");
+const composerClose = document.getElementById("sv-composer-close");
+const composerImageBtn = document.getElementById("sv-composer-image-btn");
+const composerImageInput = document.getElementById("sv-composer-image-input");
+const composerAttachBtn = document.getElementById("sv-composer-attach-btn");
+const composerFileInput = document.getElementById("sv-composer-file-input");
+const composerPostBtn = document.getElementById("sv-composer-post-btn");
+const composerTitle = document.getElementById("sv-composer-title");
+const composerTextarea = document.querySelector(".sv-composer-textarea");
+const composerPreview = document.getElementById("sv-composer-preview");
+
+fabAdd?.addEventListener("click", () => { composerOverlay.style.display = "flex"; });
+composerClose?.addEventListener("click", () => {
+  composerOverlay.style.display = "none";
+  const ta = composerTextarea; if (ta) ta.value = "";
+  const ti = composerTitle; if (ti) ti.value = "";
+  if (composerPreview) composerPreview.style.display = "none";
+});
+composerOverlay?.addEventListener("click", (e) => { if (e.target === composerOverlay) composerClose.click(); });
+
+let composerImageDataUrl = null;
+let composerFileInfo = null;
+
+composerImageBtn?.addEventListener("click", () => composerImageInput?.click());
+composerImageInput?.addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    composerImageDataUrl = ev.target.result;
+    if (composerPreview) {
+      composerPreview.innerHTML = `<img src="${composerImageDataUrl}" class="sv-composer-preview-img" />`;
+      composerPreview.style.display = "block";
     }
+  };
+  reader.readAsDataURL(file);
+});
 
-    navItems.forEach((item) => {
-      item.addEventListener("click", (e) => {
-        const tab = item.dataset.tab;
-        if (tab) {
-          e.preventDefault();
-          switchTab(tab);
-        }
-      });
-    });
+composerAttachBtn?.addEventListener("click", () => composerFileInput?.click());
+composerFileInput?.addEventListener("change", (e) => {
+  composerFileInfo = e.target.files?.[0] || null;
+  if (composerPreview && composerFileInfo) {
+    composerPreview.innerHTML = `<span class="material-symbols-outlined">description</span> ${composerFileInfo.name}`;
+    composerPreview.style.display = "block";
+  }
+});
 
-    // Splash: auto-hide after timeout
-    const splash = document.querySelector(".splash-overlay");
-    if (splash) {
-      const delay = parseInt(splash.dataset.autoHide, 10) || 2500;
-      setTimeout(() => {
-        splash.classList.add("splash-hidden");
-        setTimeout(() => { splash.style.display = "none"; }, 500);
-      }, delay);
+composerPostBtn?.addEventListener("click", async () => {
+  const title = composerTitle?.value.trim() || "";
+  const content = composerTextarea?.value.trim() || "";
+  if (!title && !content) return;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  let imageUrl = null;
+  let fileUrl = null;
+  let fileName = null;
+  try {
+    if (composerImageDataUrl) {
+      const imgFile = await fetch(composerImageDataUrl).then((r) => r.blob());
+      const ext = imgFile.type.split("/")[1] || "png";
+      const imgPath = `${user.id}/${Date.now()}.${ext}`;
+      const { data: imgData } = await supabase.storage.from("post_images").upload(imgPath, imgFile);
+      if (imgData) imageUrl = supabase.storage.from("post_images").getPublicUrl(imgData.path).data.publicUrl;
     }
-  })();
+    if (composerFileInfo) {
+      const fileExt = composerFileInfo.name.split(".").pop();
+      const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+      const { data: fileData } = await supabase.storage.from("post_images").upload(filePath, composerFileInfo);
+      if (fileData) {
+        fileUrl = supabase.storage.from("post_images").getPublicUrl(fileData.path).data.publicUrl;
+        fileName = composerFileInfo.name;
+      }
+    }
+  } catch (err) { console.error(err); }
+  const { error } = await supabase.from("posts").insert({
+    title: title || null, content: content || null, user_id: user.id, image_url: imageUrl, file_url: fileUrl, file_name: fileName,
+  });
+  if (!error) { location.reload(); }
+});
+
+// ── Post actions (like / delete / share) ──
+document.addEventListener("click", async (e) => {
+  const likeBtn = e.target.closest(".sv-post-like-btn");
+  if (likeBtn) {
+    const postId = likeBtn.dataset.postId;
+    const liked = likeBtn.dataset.liked === "true";
+    const icon = likeBtn.querySelector(".sv-post-like-icon");
+    const countEl = likeBtn.querySelector(".sv-post-like-count");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    if (liked) {
+      await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", user.id);
+      likeBtn.dataset.liked = "false";
+      if (icon) icon.textContent = "favorite_border";
+      if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
+    } else {
+      await supabase.from("post_likes").insert({ post_id: postId, user_id: user.id });
+      likeBtn.dataset.liked = "true";
+      if (icon) icon.textContent = "favorite";
+      if (countEl) countEl.textContent = parseInt(countEl.textContent) + 1;
+    }
+  }
+
+  const shareBtn = e.target.closest(".sv-post-share-btn");
+  if (shareBtn) {
+    const url = shareBtn.dataset.postUrl;
+    if (url) { try { await navigator.clipboard.writeText(url); } catch { } }
+  }
+
+  const deleteBtn = e.target.closest(".sv-post-delete-btn");
+  if (deleteBtn) {
+    if (!confirm("Delete this post?")) return;
+    const postId = deleteBtn.dataset.postId;
+    const { error } = await supabase.from("posts").delete().eq("id", postId);
+    if (!error) deleteBtn.closest(".sv-feed-post")?.remove();
+  }
+});
+
+// ── Portfolio "See more" toggle ──
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".sv-pp-post-seemore");
+  if (!btn) return;
+  const text = btn.parentElement.querySelector(".sv-pp-post-text");
+  if (!text) return;
+  text.classList.toggle("expanded");
+  btn.textContent = text.classList.contains("expanded") ? "Show less" : "See more";
+});
+document.querySelectorAll(".sv-pp-post-text").forEach((el) => {
+  if (el.scrollHeight > el.clientHeight) {
+    const btn = el.parentElement.querySelector(".sv-pp-post-seemore");
+    if (btn) btn.style.display = "";
+  }
+});
+
+// ── Copy portfolio link ──
+const copyBtn = document.getElementById("sv-copy-portfolio-link");
+copyBtn?.addEventListener("click", async () => {
+  const url = copyBtn.getAttribute("data-url");
+  if (!url) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">check</span> Copied!';
+    setTimeout(() => { copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">link</span> Copy Portfolio Link'; }, 2000);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+  }
+});
+
+// ── Portfolio mobile tab switching ──
+const portTabs = document.querySelectorAll(".sv-pp-mtab");
+const portPanels = document.querySelectorAll(".sv-pp-tab-panel");
+portTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    const target = tab.dataset.tab;
+    portTabs.forEach((t) => t.classList.remove("active"));
+    tab.classList.add("active");
+    portPanels.forEach((p) => p.classList.toggle("sv-pp-tab-panel--active", p.dataset.tab === target));
+  });
+});
+
+// ── Portfolio like/unlike ──
+document.querySelectorAll(".sv-pp-like-btn").forEach((btn) => {
+  btn.addEventListener("click", async () => {
+    const postId = btn.dataset.postId;
+    const liked = btn.dataset.liked === "true";
+    const icon = btn.querySelector(".sv-pp-like-icon");
+    const countEl = btn.querySelector(".sv-pp-like-count");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    if (liked) {
+      await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", user.id);
+      btn.dataset.liked = "false";
+      if (icon) icon.textContent = "favorite_border";
+      if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
+    } else {
+      await supabase.from("post_likes").insert({ post_id: postId, user_id: user.id });
+      btn.dataset.liked = "true";
+      if (icon) icon.textContent = "favorite";
+      if (countEl) countEl.textContent = parseInt(countEl.textContent) + 1;
+    }
+  });
+});
+
+// ── Event registration ──
+async function toggleRegistration(eventId, btn) {
+  const isRegistered = btn.textContent.trim() === "Unregister";
+  if (isRegistered) {
+    const { error } = await supabase.from("event_registrations").delete().eq("event_id", eventId);
+    if (error) { console.error(error); return; }
+    btn.textContent = "Register";
+    const icon = btn.closest(".sv-ev-featured-card")?.querySelector(".sv-ev-bookmark-btn span");
+    if (icon) icon.textContent = "bookmark_border";
+  } else {
+    const { error } = await supabase.from("event_registrations").insert({ event_id: eventId });
+    if (error) { console.error(error); return; }
+    btn.textContent = "Unregister";
+    const icon = btn.closest(".sv-ev-featured-card")?.querySelector(".sv-ev-bookmark-btn span");
+    if (icon) icon.textContent = "bookmark";
+  }
+}
+
+document.addEventListener("click", (e) => {
+  const regBtn = e.target.closest(".sv-ev-reg-btn");
+  if (regBtn) { e.preventDefault(); toggleRegistration(regBtn.dataset.eventId, regBtn); }
+});
+document.addEventListener("click", (e) => {
+  const bookmarkBtn = e.target.closest(".sv-ev-bookmark-btn");
+  if (bookmarkBtn) {
+    e.preventDefault();
+    const eventId = bookmarkBtn.dataset.eventId;
+    const rBtn = document.querySelector(`.sv-ev-reg-btn[data-event-id="${eventId}"]`);
+    if (rBtn) toggleRegistration(eventId, rBtn);
+  }
+});
+
+// ── Events tab switching ──
+const evTabs = document.querySelectorAll(".sv-ev-tab");
+const evViewAll = document.getElementById("sv-ev-view-all");
+const evViewCalendar = document.getElementById("sv-ev-view-calendar");
+const evViewPast = document.getElementById("sv-ev-view-past");
+evTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    if (tab.classList.contains("active")) return;
+    evTabs.forEach((t) => t.classList.remove("active"));
+    tab.classList.add("active");
+    if (evViewAll) evViewAll.style.display = "none";
+    if (evViewCalendar) evViewCalendar.style.display = "none";
+    if (evViewPast) evViewPast.style.display = "none";
+    const name = tab.dataset.tab;
+    if (name === "all" && evViewAll) evViewAll.style.display = "";
+    else if (name === "calendar" && evViewCalendar) evViewCalendar.style.display = "";
+    else if (name === "past" && evViewPast) evViewPast.style.display = "";
+  });
+});
 </script>
 
 <style is:global>
-  /* Shell root */
-  .shell-root {
+  /* ── Shell Layout ── */
+  .sv-shell {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background: var(--color-background, #F0F2F5);
-    position: relative;
+    background: #f7f9fc;
+    font-family: Inter, sans-serif;
+  }
+  .sv-panel { display: none; flex: 1; }
+  .sv-panel--active { display: flex; flex-direction: column; }
+
+  /* ── Bottom Nav ── */
+  .sv-bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-around;
+    height: 64px; background: #f7f9fc;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+    z-index: 100; padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .sv-bnav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    background: none; border: none; cursor: pointer; padding: 6px 12px;
+    font-family: Inter, sans-serif; font-size: 0.65rem; color: var(--color-outline);
+    text-decoration: none; transition: color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sv-bnav-item .material-symbols-outlined { font-size: 22px; }
+  .sv-bnav-item.active { color: var(--color-primary); }
+  .sv-bnav-item.active .material-symbols-outlined { font-variation-settings: "FILL" 1; }
+
+  /* ── Feed Styles ── */
+  .sv-feed-root { display: flex; min-height: 100vh; background: #f7f9fc; }
+  .sv-feed-main { flex: 1; overflow-y: auto; padding: 0 0 80px; }
+  .sv-feed-content { max-width: 680px; margin: 0 auto; padding: 1rem; }
+
+  .sv-guest-banner {
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem;
+    margin-bottom: 1rem; border-radius: 12px;
+    background: var(--color-surface-container-low); color: var(--color-on-surface-variant);
+    font-size: 0.82rem;
+  }
+  .sv-guest-icon { font-size: 18px; }
+  .sv-guest-link { color: var(--color-primary); font-weight: 600; }
+
+  .sv-top-search-wrap {
+    position: relative; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;
+  }
+  .sv-top-search-icon { position: absolute; left: 12px; color: var(--color-outline); font-size: 18px; pointer-events: none; }
+  .sv-top-search-input {
+    flex: 1; padding: 0.75rem 2.5rem; border: none; border-radius: 12px;
+    background: var(--color-surface-container-low); font-size: 0.8rem; outline: none;
+    font-family: Inter, sans-serif; color: var(--color-on-surface);
+  }
+  .sv-top-search-input::placeholder { color: var(--color-outline); }
+  .sv-top-search-clear {
+    position: absolute; right: 48px; background: none; border: none; color: var(--color-outline); cursor: pointer;
+    display: none; padding: 4px;
+  }
+  .sv-top-search-input:not(:placeholder-shown) ~ .sv-top-search-clear { display: flex; }
+  .sv-feed-refresh-btn {
+    background: var(--color-surface-container-low); border: none; border-radius: 12px;
+    width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+    color: var(--color-primary); cursor: pointer;
+  }
+  .sv-top-search-dropdown {
+    position: absolute; top: 100%; left: 0; right: 48px; z-index: 50;
+    background: #f7f9fc; border-radius: 12px; box-shadow: 8px 8px 16px #d1d9e6, -8px -8px 16px #ffffff;
+    margin-top: 4px; padding: 0.5rem; display: none;
+  }
+  .sv-top-search-dropdown.active { display: block; }
+  .sv-search-result-item {
+    display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem; border-radius: 8px;
+    text-decoration: none; color: var(--color-on-surface); transition: background 0.15s;
+  }
+  .sv-search-result-item:hover { background: var(--color-surface-container-high); }
+  .sv-search-result-avatar img, .sv-search-result-avatar { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; background: var(--color-surface-variant); display: flex; align-items: center; justify-content: center; }
+  .sv-search-result-avatar .material-symbols-outlined { font-size: 20px; color: var(--color-outline); }
+  .sv-search-result-item img { width: 100%; height: 100%; object-fit: cover; }
+  .sv-search-result-info { display: flex; flex-direction: column; gap: 1px; }
+  .sv-search-result-info strong { font-size: 0.8rem; }
+  .sv-search-result-info span { font-size: 0.7rem; color: var(--color-outline); }
+  .sv-search-noresult { padding: 1rem; text-align: center; color: var(--color-outline); font-size: 0.8rem; }
+
+  .sv-feed-newusers { margin-bottom: 1rem; }
+  .sv-feed-newusers-label { font-size: 0.75rem; font-weight: 600; color: var(--color-outline); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .sv-feed-newusers-list { display: flex; gap: 0.75rem; overflow-x: auto; padding-bottom: 4px; }
+  .sv-feed-newuser-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; min-width: 60px;
+  }
+  .sv-feed-newuser-avatar { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; }
+  .sv-feed-newuser-placeholder { background: var(--color-surface-container-high); display: flex; align-items: center; justify-content: center; color: var(--color-outline); }
+  .sv-feed-newuser-placeholder .material-symbols-outlined { font-size: 22px; }
+  .sv-feed-newuser-item img { width: 100%; height: 100%; object-fit: cover; }
+  .sv-feed-newuser-name { font-size: 0.65rem; color: var(--color-on-surface-variant); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px; }
+
+  /* ── Feed Posts ── */
+  .sv-feed-posts { display: flex; flex-direction: column; gap: 1rem; }
+  .sv-feed-empty { text-align: center; color: var(--color-outline); padding: 3rem 1rem; font-size: 0.9rem; }
+  .sv-feed-post {
+    background: #f7f9fc; border-radius: 16px; padding: 1rem;
+    box-shadow: 8px 8px 16px #d1d9e6, -8px -8px 16px #ffffff;
+  }
+  .sv-post-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+  .sv-post-author { display: flex; align-items: center; gap: 0.65rem; text-decoration: none; }
+  .sv-post-avatar { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; color: var(--color-outline); display: flex; align-items: center; justify-content: center; }
+  .sv-post-avatar .material-symbols-outlined { font-size: 28px; }
+  .sv-post-avatar-img { width: 100%; height: 100%; object-fit: cover; }
+  .sv-post-author-info { display: flex; flex-direction: column; }
+  .sv-post-author-name { font-size: 0.82rem; color: var(--color-on-surface); }
+  .sv-post-author-meta { font-size: 0.7rem; color: var(--color-outline); }
+  .sv-post-menu-btn { background: none; border: none; color: var(--color-outline); cursor: pointer; padding: 4px; }
+  .sv-post-body { margin-bottom: 0.75rem; }
+  .sv-post-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem; color: var(--color-on-surface); font-family: Inter, sans-serif; }
+  .sv-post-text { font-size: 0.82rem; color: var(--color-on-surface-variant); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .sv-post-text.expanded { display: block; -webkit-line-clamp: unset; }
+  .sv-post-seemore { background: none; border: none; color: var(--color-primary); font-size: 0.75rem; cursor: pointer; padding: 2px 0; font-family: Inter, sans-serif; }
+  .sv-post-image { width: 100%; border-radius: 12px; margin-top: 0.5rem; }
+  .sv-post-attach-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; color: var(--color-primary); margin-top: 0.5rem; padding: 6px 12px; background: var(--color-surface-container-low); border-radius: 8px; text-decoration: none; }
+  .sv-post-attach-link .material-symbols-outlined { font-size: 16px; }
+  .sv-post-actions { display: flex; gap: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--color-surface-container); }
+  .sv-post-action-btn {
+    display: flex; align-items: center; gap: 4px; background: none; border: none; cursor: pointer;
+    font-size: 0.75rem; color: var(--color-outline); padding: 4px 8px; border-radius: 8px;
+    font-family: Inter, sans-serif; transition: background 0.15s;
+  }
+  .sv-post-action-btn:hover { background: var(--color-surface-container-low); }
+  .sv-post-action-btn .material-symbols-outlined { font-size: 18px; }
+
+  /* ── Composer Modal ── */
+  .sv-composer-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 200;
+    display: none; align-items: center; justify-content: center; padding: 1rem;
+  }
+  .sv-composer-modal { background: #f7f9fc; border-radius: 20px; padding: 1.5rem; width: 100%; max-width: 500px; box-shadow: 12px 12px 24px #d1d9e6; }
+  .sv-composer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .sv-composer-header h3 { font-family: Sora, sans-serif; font-size: 1rem; }
+  .sv-composer-close { background: none; border: none; color: var(--color-outline); cursor: pointer; }
+  .sv-post-composer { display: flex; flex-direction: column; gap: 0.75rem; }
+  .sv-composer-avatar { display: flex; align-items: center; gap: 0.75rem; }
+  .sv-composer-avatar-img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+  .sv-composer-avatar-placeholder { width: 36px; height: 36px; border-radius: 50%; background: var(--color-surface-container-high); display: flex; align-items: center; justify-content: center; color: var(--color-outline); }
+  .sv-composer-input-area { display: flex; flex-direction: column; gap: 0.5rem; }
+  .sv-composer-input { padding: 0.75rem; border: none; border-radius: 12px; background: var(--color-surface-container-low); font-size: 0.82rem; outline: none; font-family: Inter, sans-serif; }
+  .sv-composer-textarea { resize: vertical; min-height: 80px; }
+  .sv-composer-preview { padding: 0.5rem; background: var(--color-surface-container-low); border-radius: 8px; text-align: center; font-size: 0.78rem; color: var(--color-outline); display: flex; align-items: center; gap: 6px; }
+  .sv-composer-preview-img { max-width: 100%; max-height: 200px; border-radius: 8px; }
+  .sv-composer-actions { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem; }
+  .sv-composer-action-btn { background: var(--color-surface-container-low); border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--color-on-surface-variant); }
+  .sv-composer-post-btn {
+    margin-left: auto; padding: 0.6rem 1.5rem; border: none; border-radius: 12px;
+    background: var(--color-primary); color: white; font-weight: 600; font-size: 0.82rem;
+    cursor: pointer; font-family: Inter, sans-serif;
+  }
+  .sv-fab {
+    position: fixed; bottom: 80px; right: 20px; z-index: 50;
+    width: 52px; height: 52px; border-radius: 50%; border: none;
+    background: var(--color-primary); color: white; cursor: pointer;
+    box-shadow: 4px 4px 12px rgba(0,106,103,0.3);
+    display: flex; align-items: center; justify-content: center;
   }
 
-  /* Viewport — scrollable area between top and bottom nav */
-  .shell-viewport {
-    flex: 1;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 5rem;
+  /* ── Profile Overlay ── */
+  .sv-profile-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 200;
+    display: none; align-items: center; justify-content: center; padding: 1rem;
   }
+  .sv-profile-modal { background: #f7f9fc; border-radius: 20px; padding: 1.5rem; width: 100%; max-width: 400px; }
+  .sv-profile-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .sv-profile-modal-header h3 { font-family: Sora, sans-serif; font-size: 1rem; }
+  .sv-profile-close { background: none; border: none; color: var(--color-outline); cursor: pointer; }
 
-  .shell-panel {
-    min-height: 100%;
-  }
+  /* ── Portfolio Styles ── */
+  .sv-pp-root { display: flex; min-height: 100vh; background: #f7f9fc; padding-bottom: 80px; }
+  .sv-pp-main { flex: 1; overflow-y: auto; padding: 1rem; }
+  .sv-pp-container { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+  @media (min-width: 1024px) { .sv-pp-container { grid-template-columns: 2fr 1fr; } }
+  .sv-pp-card { background: #f7f9fc; border-radius: 16px; padding: 1.5rem; box-shadow: 8px 8px 16px #d1d9e6, -8px -8px 16px #ffffff; margin-bottom: 1.5rem; }
+  .sv-pp-hero-card { background: linear-gradient(135deg, var(--color-surface), var(--color-surface-container-high)); border: 1px solid rgba(255,255,255,0.4); box-shadow: 12px 12px 24px rgba(0,0,0,0.06), -8px -8px 16px rgba(255,255,255,0.8); }
+  .sv-pp-hero-inner { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem; }
+  .sv-pp-hero-avatars { display: flex; justify-content: center; }
+  .sv-pp-dasthar { width: 110px; height: 140px; object-fit: cover; border-radius: 12px; box-shadow: 4px 4px 12px rgba(0,0,0,0.1); }
+  .sv-pp-avatar { width: 90px; height: 90px; object-fit: cover; border-radius: 50%; box-shadow: 4px 4px 12px rgba(0,0,0,0.1); }
+  .sv-pp-avatar-placeholder { width: 90px; height: 90px; border-radius: 50%; background: var(--color-surface-container-high); display: flex; align-items: center; justify-content: center; color: var(--color-outline); }
+  .sv-pp-avatar-placeholder .material-symbols-outlined { font-size: 40px; }
+  .sv-pp-hero-body { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; width: 100%; }
+  .sv-pp-name { font-family: Sora, sans-serif; font-size: 1.3rem; font-weight: 700; color: var(--color-on-surface); }
+  .sv-pp-so-id { font-size: 0.72rem; background: var(--color-surface-container); padding: 2px 10px; border-radius: 6px; color: var(--color-outline); }
+  .sv-pp-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; font-size: 0.78rem; color: var(--color-on-surface-variant); }
+  .sv-pp-meta-item { display: flex; align-items: center; gap: 4px; }
+  .sv-pp-meta-icon { font-size: 14px; color: var(--color-primary); }
+  .sv-pp-tier-badge { display: inline-block; padding: 0.2rem 0.7rem; border-radius: 9999px; background: var(--color-primary-container); color: var(--color-on-primary-container); font-size: 0.7rem; font-weight: 600; }
+  .sv-pp-alumni-block { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+  .sv-pp-alumni-badge { padding: 0.2rem 0.7rem; border-radius: 9999px; background: var(--color-tertiary-container); color: var(--color-on-tertiary-container); font-size: 0.7rem; font-weight: 600; }
+  .sv-pp-alumni-detail { font-size: 0.78rem; color: var(--color-on-surface-variant); }
+  .sv-pp-course-name { font-size: 0.82rem; color: var(--color-on-surface-variant); font-style: italic; }
+  .sv-pp-chips-wrap { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .sv-pp-chip { padding: 0.25rem 0.7rem; border-radius: 9999px; background: var(--color-surface-container-high); font-size: 0.7rem; color: var(--color-on-surface-variant); }
+  .sv-pp-tech-chip { background: var(--color-surface-container); font-family: monospace; }
+  .sv-pp-bio-summary { width: 100%; padding-top: 0.75rem; border-top: 1px solid var(--color-surface-container-high); text-align: left; }
+  .sv-pp-bio-summary-text { font-size: 0.82rem; color: var(--color-on-surface-variant); line-height: 1.6; white-space: pre-line; }
+  .sv-pp-pending-banner { display: flex; align-items: center; gap: 0.75rem; background: var(--color-surface-container-low); border: 1px solid var(--color-primary-container); }
+  .sv-pp-pending-banner .material-symbols-outlined { color: var(--color-primary); }
+  .sv-pp-pending-banner strong { font-size: 0.85rem; }
+  .sv-pp-pending-banner p { font-size: 0.78rem; color: var(--color-on-surface-variant); }
 
-  /* ── Bottom Navigation ── */
-  .shell-bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 64px;
-    background: var(--color-surface, #FFFFFF);
-    border-top: 1px solid var(--color-outline-variant, #E2E8F0);
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.06);
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    padding: 0.35rem 0;
-  }
+  /* Portfolio tabs */
+  .sv-pp-mobile-tabs { display: flex; gap: 4px; margin-bottom: 1rem; background: var(--color-surface-container-high); border-radius: 9999px; padding: 3px; overflow-x: auto; }
+  .sv-pp-mtab { flex: 1; padding: 0.5rem 0.75rem; border: none; background: transparent; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; color: var(--color-outline); cursor: pointer; white-space: nowrap; font-family: Inter, sans-serif; transition: all 0.15s; }
+  .sv-pp-mtab.active { background: #f7f9fc; color: var(--color-on-surface); box-shadow: 2px 2px 6px #d1d9e6, -2px -2px 6px #ffffff; }
+  .sv-pp-tab-panel { display: none; }
+  .sv-pp-tab-panel--active { display: block; }
 
-  .shell-nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    background: none;
-    border: none;
-    color: var(--color-outline, #94A3B8);
-    font-family: var(--font-label, Inter, sans-serif);
-    font-size: 0.65rem;
-    font-weight: 600;
-    padding: 0.5rem 0.75rem;
-    cursor: pointer;
-    transition: color 0.2s;
-    text-decoration: none;
-    border-radius: 8px;
-  }
+  .sv-pp-section-title { display: flex; align-items: center; gap: 0.5rem; font-size: 1rem; font-family: Sora, sans-serif; margin-bottom: 1rem; }
+  .sv-pp-section-icon { font-size: 18px; color: var(--color-primary); }
+  .sv-pp-posts-list { display: flex; flex-direction: column; gap: 1rem; }
+  .sv-pp-post-item { padding-bottom: 1rem; border-bottom: 1px solid var(--color-surface-container); }
+  .sv-pp-post-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .sv-pp-post-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .sv-pp-post-text { font-size: 0.8rem; color: var(--color-on-surface-variant); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .sv-pp-post-text.expanded { display: block; -webkit-line-clamp: unset; }
+  .sv-pp-post-seemore { background: none; border: none; color: var(--color-primary); font-size: 0.72rem; cursor: pointer; padding: 2px 0; font-family: Inter, sans-serif; }
+  .sv-pp-post-image { width: 100%; border-radius: 10px; margin-top: 0.5rem; }
+  .sv-pp-post-attach { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--color-primary); margin-top: 0.5rem; }
+  .sv-pp-post-meta-row { display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem; }
+  .sv-pp-post-time { font-size: 0.7rem; color: var(--color-outline); }
+  .sv-pp-like-btn { display: flex; align-items: center; gap: 4px; background: none; border: none; cursor: pointer; font-size: 0.72rem; color: var(--color-outline); padding: 2px 6px; border-radius: 6px; font-family: Inter, sans-serif; }
+  .sv-pp-like-btn .material-symbols-outlined { font-size: 16px; }
+  .sv-pp-like-btn[data-liked="true"] { color: #e74c3c; }
+  .sv-pp-milestones-list { display: flex; flex-direction: column; gap: 0.75rem; }
+  .sv-pp-milestone-row { display: flex; align-items: center; justify-content: space-between; }
+  .sv-pp-milestone-left { display: flex; align-items: center; gap: 0.65rem; }
+  .sv-pp-milestone-badge { color: var(--color-primary); font-size: 20px; }
+  .sv-pp-milestone-title { font-size: 0.82rem; font-weight: 600; }
+  .sv-pp-milestone-issuer { font-size: 0.72rem; color: var(--color-outline); }
+  .sv-pp-milestone-link { color: var(--color-outline); }
+  .sv-pp-empty { text-align: center; color: var(--color-outline); padding: 1rem; font-size: 0.82rem; }
 
-  .shell-nav-item:hover {
-    color: var(--color-primary, #0D9488);
-  }
+  /* Connect */
+  .sv-pp-connect-card {}
+  .sv-pp-connect-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem; }
+  .sv-pp-connect-title { font-family: Sora, sans-serif; font-size: 0.95rem; margin: 0; }
+  .sv-pp-phone-link { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--color-primary); text-decoration: none; }
+  .sv-pp-phone-link .material-symbols-outlined { font-size: 16px; }
+  .sv-pp-social-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .sv-pp-social-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: var(--color-surface-container-low); color: var(--color-on-surface-variant); text-decoration: none; transition: all 0.15s; }
+  .sv-pp-social-btn:hover { background: var(--color-primary); color: white; }
+  .sv-social-icon { width: 20px; height: 20px; }
+  .sv-pp-action-btn { display: block; width: 100%; padding: 0.7rem; margin-top: 0.75rem; border: none; border-radius: 12px; background: var(--color-primary); color: white; font-size: 0.82rem; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; font-family: Inter, sans-serif; }
+  .sv-pp-action-secondary { background: var(--color-surface-container-high); color: var(--color-on-surface); display: flex; align-items: center; justify-content: center; gap: 6px; }
 
-  .shell-nav-item.active {
-    color: var(--color-primary, #0D9488);
-  }
+  /* Project */
+  .sv-pp-project-badge { display: inline-block; padding: 0.2rem 0.7rem; border-radius: 9999px; background: var(--color-primary-container); color: var(--color-on-primary-container); font-size: 0.7rem; font-weight: 600; margin-bottom: 0.75rem; }
+  .sv-pp-project-head { display: flex; align-items: center; justify-content: space-between; }
+  .sv-pp-project-name { font-size: 1rem; font-family: Sora, sans-serif; }
+  .sv-pp-project-links { display: flex; gap: 0.5rem; }
+  .sv-pp-project-link { color: var(--color-outline); }
+  .sv-pp-project-desc { font-size: 0.82rem; color: var(--color-on-surface-variant); line-height: 1.5; margin-top: 0.5rem; }
+  .sv-pp-progress-section { margin-top: 0.75rem; }
+  .sv-pp-progress-labels { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--color-outline); margin-bottom: 0.4rem; }
+  .sv-pp-progress-track { height: 6px; border-radius: 9999px; background: var(--color-surface-container-high); overflow: hidden; }
+  .sv-pp-progress-fill { height: 100%; border-radius: 9999px; background: var(--color-primary); transition: width 0.3s ease; }
 
-  .shell-nav-item .material-symbols-outlined {
-    font-size: 24px !important;
-  }
+  /* ── Events Styles ── */
+  .sv-ev-root { display: flex; min-height: 100vh; background: #f7f9fc; padding-bottom: 80px; }
+  .sv-ev-main { flex: 1; overflow-y: auto; padding: 1rem; }
+  .sv-ev-content { max-width: 1100px; margin: 0 auto; }
+  .sv-ev-header { margin-bottom: 1.5rem; }
+  .sv-ev-title { font-family: Sora, sans-serif; font-size: 1.3rem; font-weight: 700; margin: 0; }
+  .sv-ev-subtitle { font-size: 0.82rem; color: var(--color-outline); margin: 0.25rem 0 0; }
+  .sv-ev-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: var(--color-surface-container-high); border-radius: 9999px; padding: 0.25rem; width: fit-content; }
+  .sv-ev-tab { padding: 0.5rem 1rem; border: none; background: transparent; border-radius: 9999px; font-size: 0.78rem; font-weight: 600; color: var(--color-outline); cursor: pointer; font-family: Inter, sans-serif; transition: all 0.15s; white-space: nowrap; }
+  .sv-ev-tab.active { background: #f7f9fc; color: var(--color-on-surface); box-shadow: 2px 2px 6px #d1d9e6, -2px -2px 6px #ffffff; }
+  .sv-ev-featured-section { display: flex; flex-direction: column; gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (min-width: 768px) { .sv-ev-featured-section { flex-direction: row; } }
+  .sv-ev-featured-card { flex: 1; background: #f7f9fc; border-radius: 20px; padding: 1.5rem; box-shadow: 8px 8px 16px #d1d9e6, -8px -8px 16px #ffffff; position: relative; }
+  .sv-ev-featured-badge { position: absolute; top: 1rem; left: 1rem; background: #e74c3c; color: white; padding: 0.2rem 0.7rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; }
+  .sv-ev-featured-top { display: flex; justify-content: flex-end; margin-bottom: 0.5rem; }
+  .sv-ev-bookmark-btn { background: none; border: none; color: var(--color-outline); cursor: pointer; }
+  .sv-ev-bookmark-btn .material-symbols-outlined { font-size: 22px; }
+  .sv-ev-featured-date { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.82rem; color: var(--color-on-surface-variant); margin-bottom: 0.75rem; }
+  .sv-ev-date-icon { font-size: 14px; }
+  .sv-ev-featured-title { font-family: Sora, sans-serif; font-size: 1.1rem; margin-bottom: 0.5rem; }
+  .sv-ev-featured-desc { font-size: 0.82rem; color: var(--color-on-surface-variant); line-height: 1.5; margin-bottom: 1rem; }
+  .sv-ev-join-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.6rem 1.5rem; border: none; border-radius: 12px; background: var(--color-primary); color: white; font-weight: 600; font-size: 0.82rem; cursor: pointer; font-family: Inter, sans-serif; }
+  .sv-ev-upnext { width: 100%; max-width: 320px; }
+  @media (min-width: 768px) { .sv-ev-upnext { max-width: 280px; } }
+  .sv-ev-upnext-header { font-size: 0.75rem; font-weight: 600; color: var(--color-outline); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.75rem; }
+  .sv-ev-upnext-list { display: flex; flex-direction: column; gap: 0.75rem; }
+  .sv-ev-upnext-item { padding: 0.75rem; background: var(--color-surface-container-low); border-radius: 12px; }
+  .sv-ev-upnext-time { font-size: 0.7rem; color: var(--color-outline); margin-bottom: 0.25rem; }
+  .sv-ev-upnext-row { display: flex; align-items: center; gap: 0.5rem; }
+  .sv-ev-upnext-icon { font-size: 18px; color: var(--color-primary); }
+  .sv-ev-upnext-name { font-size: 0.82rem; font-weight: 600; }
+  .sv-ev-upnext-desc { font-size: 0.72rem; color: var(--color-outline); }
+  .sv-ev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+  .sv-ev-card { background: #f7f9fc; border-radius: 16px; padding: 1.25rem; box-shadow: 8px 8px 16px #d1d9e6, -8px -8px 16px #ffffff; }
+  .sv-ev-card-past { opacity: 0.65; }
+  .sv-ev-card-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.75rem; }
+  .sv-ev-card-icon .material-symbols-outlined { font-size: 22px; }
+  .sv-ev-card-icon-general { background: var(--color-primary-container); color: var(--color-on-primary-container); }
+  .sv-ev-card-category { font-size: 0.7rem; font-weight: 600; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.25rem; }
+  .sv-ev-card-date { font-size: 0.72rem; color: var(--color-outline); margin-bottom: 0.5rem; }
+  .sv-ev-card-title { font-family: Sora, sans-serif; font-size: 0.9rem; margin-bottom: 0.25rem; }
+  .sv-ev-card-desc { font-size: 0.78rem; color: var(--color-on-surface-variant); line-height: 1.4; margin-bottom: 0.75rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .sv-ev-register-btn { padding: 0.4rem 1rem; border: none; border-radius: 9999px; background: var(--color-primary-container); color: var(--color-on-primary-container); font-size: 0.72rem; font-weight: 600; cursor: pointer; font-family: Inter, sans-serif; }
+  .sv-ev-past-badge { display: inline-block; padding: 0.3rem 0.8rem; border-radius: 9999px; background: var(--color-surface-variant); color: var(--color-on-surface-variant); font-size: 0.72rem; font-weight: 600; }
+  .sv-ev-empty { text-align: center; color: var(--color-outline); padding: 3rem 1rem; font-size: 0.82rem; background: var(--color-surface-container-low); border-radius: 16px; grid-column: 1 / -1; }
 
-  /* Override feed viewport so it doesn't add its own padding-bottom */
-  .feed-view-content .feed-content {
-    padding-bottom: 0;
-  }
-
-  /* Hide desktop-only elements */
-  @media (min-width: 769px) {
-    .shell-bottom-nav {
-      display: none;
-    }
-    .shell-viewport {
-      padding-bottom: 0;
-    }
+  /* ── Responsive tweaks ── */
+  @media (min-width: 768px) {
+    .sv-feed-main { padding: 2rem 0 80px; }
+    .sv-feed-content { padding: 1.5rem; }
   }
 </style>

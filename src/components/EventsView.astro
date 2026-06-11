@@ -1,543 +1,146 @@
 ---
 export interface Props {
-  profile: Record<string, any>;
-  avatarUrl: string | null;
+  profile: any;
   events: any[];
   registeredIds: Set<string>;
-  featuredEvent: any | null;
+  featuredEvent: any;
   upNextEvents: any[];
   gridEvents: any[];
   myCalendarEvents: any[];
   pastEvents: any[];
+  liveEvent: any;
 }
-
-const {
-  profile,
-  avatarUrl,
-  events,
-  registeredIds,
-  featuredEvent,
-  upNextEvents,
-  gridEvents,
-  myCalendarEvents,
-  pastEvents,
-} = Astro.props;
-
-const now = new Date().toISOString();
-const upcomingEvents = (events || []).filter((e: any) => e.event_date >= now);
+const { profile, events, registeredIds, featuredEvent, upNextEvents, gridEvents, myCalendarEvents, pastEvents, liveEvent } = Astro.props;
 ---
 
-<div class="events-view-content">
-  <div class="ev-content">
-    <div class="ev-header">
-      <h1 class="ev-title">Events & Webinars</h1>
-      <p class="ev-subtitle">Discover academic conferences, symposiums, and digital lectures.</p>
-    </div>
-
-    <div class="ev-tabs">
-      <button class="ev-tab active" data-tab="all">All Events</button>
-      <button class="ev-tab" data-tab="calendar">My Calendar</button>
-      <button class="ev-tab" data-tab="past">Past Webinars</button>
-    </div>
-
-    <div id="ev-view-all">
-      {featuredEvent && (
-      <div class="ev-featured-section">
-        <div class="ev-featured-card">
-          {featuredEvent.is_live && <div class="ev-featured-badge">Live Now</div>}
-          <div class="ev-featured-top">
-            <button class="ev-bookmark-btn" data-event-id={featuredEvent.id} aria-label="Bookmark">
-              <span class="material-symbols-outlined">{registeredIds.has(featuredEvent.id) ? "bookmark" : "bookmark_border"}</span>
-            </button>
-          </div>
-          <div class="ev-featured-date">
-            <span class="material-symbols-outlined ev-date-icon">event</span>
-            {new Date(featuredEvent.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-            <span class="material-symbols-outlined ev-date-icon">schedule</span>
-            {new Date(featuredEvent.event_date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} UTC
-          </div>
-          <h2 class="ev-featured-title">{featuredEvent.title}</h2>
-          <p class="ev-featured-desc">{featuredEvent.description}</p>
-          <button class="ev-join-btn ev-reg-btn" data-event-id={featuredEvent.id}>
-            {registeredIds.has(featuredEvent.id) ? "Registered" : "Register"}
-            <span class="material-symbols-outlined">arrow_forward</span>
-          </button>
+<div id="events-panel" class="sv-panel">
+  <div class="sv-ev-root">
+    <main class="sv-ev-main">
+      <div class="sv-ev-content">
+        <div class="sv-ev-header">
+          <h1 class="sv-ev-title">Events & Webinars</h1>
+          <p class="sv-ev-subtitle">Discover academic conferences, symposiums, and digital lectures.</p>
         </div>
 
-        {upNextEvents.length > 0 && (
-        <aside class="ev-upnext">
-          <div class="ev-upnext-header">
-            <span>Up Next</span>
-          </div>
-          <div class="ev-upnext-list">
-            {upNextEvents.map((e) => (
-            <div class="ev-upnext-item">
-              <div class="ev-upnext-time">
-                {new Date(e.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}, {new Date(e.event_date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+        <div class="sv-ev-tabs">
+          <button class="sv-ev-tab active" data-tab="all">All Events</button>
+          {profile && <button class="sv-ev-tab" data-tab="calendar">My Calendar</button>}
+          <button class="sv-ev-tab" data-tab="past">Past Webinars</button>
+        </div>
+
+        <div id="sv-ev-view-all">
+          {featuredEvent && (
+          <div class="sv-ev-featured-section">
+            <div class="sv-ev-featured-card">
+              {featuredEvent.is_live && <div class="sv-ev-featured-badge">Live Now</div>}
+              <div class="sv-ev-featured-top">
+                <button class="sv-ev-bookmark-btn" data-event-id={featuredEvent.id} aria-label="Bookmark">
+                  <span class="material-symbols-outlined">{registeredIds.has(featuredEvent.id) ? "bookmark" : "bookmark_border"}</span>
+                </button>
               </div>
-              <div class="ev-upnext-row">
-                <span class="material-symbols-outlined ev-upnext-icon">{e.icon || "event"}</span>
-                <div>
-                  <div class="ev-upnext-name">{e.title}</div>
-                  <div class="ev-upnext-desc">{e.category}</div>
-                </div>
+              <div class="sv-ev-featured-date">
+                <span class="material-symbols-outlined sv-ev-date-icon">event</span>
+                {new Date(featuredEvent.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                <span class="material-symbols-outlined sv-ev-date-icon">schedule</span>
+                {new Date(featuredEvent.event_date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} UTC
               </div>
+              <h2 class="sv-ev-featured-title">{featuredEvent.title}</h2>
+              <p class="sv-ev-featured-desc">{featuredEvent.description}</p>
+              <button class="sv-ev-join-btn sv-ev-reg-btn" data-event-id={featuredEvent.id}>
+                {registeredIds.has(featuredEvent.id) ? "Registered" : "Register"}
+                <span class="material-symbols-outlined">arrow_forward</span>
+              </button>
             </div>
+
+            {upNextEvents.length > 0 && (
+            <aside class="sv-ev-upnext">
+              <div class="sv-ev-upnext-header">
+                <span>Up Next</span>
+              </div>
+              <div class="sv-ev-upnext-list">
+                {upNextEvents.map((e: any) => (
+                <div class="sv-ev-upnext-item">
+                  <div class="sv-ev-upnext-time">
+                    {new Date(e.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}, {new Date(e.event_date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                  </div>
+                  <div class="sv-ev-upnext-row">
+                    <span class="material-symbols-outlined sv-ev-upnext-icon">{e.icon || "event"}</span>
+                    <div>
+                      <div class="sv-ev-upnext-name">{e.title}</div>
+                      <div class="sv-ev-upnext-desc">{e.category}</div>
+                    </div>
+                  </div>
+                </div>
+                ))}
+              </div>
+            </aside>
+            )}
+          </div>
+          )}
+
+          <div class="sv-ev-grid" id="sv-ev-grid">
+            {gridEvents.length === 0 && !featuredEvent && (
+              <p class="sv-ev-empty">No upcoming events at this time.</p>
+            )}
+            {gridEvents.map((e: any) => (
+            <article class="sv-ev-card" data-event-id={e.id}>
+              <div class={`sv-ev-card-icon sv-ev-card-icon-${e.category?.toLowerCase().slice(0, 5) || "general"}`}>
+                <span class="material-symbols-outlined">{e.icon || "event"}</span>
+              </div>
+              <div class="sv-ev-card-category">{e.category}</div>
+              <div class="sv-ev-card-date">{new Date(e.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
+              <h3 class="sv-ev-card-title">{e.title}</h3>
+              <p class="sv-ev-card-desc">{e.description}</p>
+              <button class="sv-ev-register-btn sv-ev-reg-btn" data-event-id={e.id}>
+                {registeredIds.has(e.id) ? "Unregister" : "Register"}
+              </button>
+            </article>
             ))}
           </div>
-        </aside>
-        )}
-      </div>
-      )}
-
-      <div class="ev-grid" id="ev-grid">
-        {gridEvents.length === 0 && upcomingEvents.length === 0 && (
-          <p class="ev-empty">No upcoming events at this time.</p>
-        )}
-        {gridEvents.map((e) => (
-        <article class="ev-card" data-event-id={e.id}>
-          <div class={`ev-card-icon ev-card-icon-${e.category?.toLowerCase().slice(0, 5) || "general"}`}>
-            <span class="material-symbols-outlined">{e.icon || "event"}</span>
-          </div>
-          <div class="ev-card-category">{e.category}</div>
-          <div class="ev-card-date">{new Date(e.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
-          <h3 class="ev-card-title">{e.title}</h3>
-          <p class="ev-card-desc">{e.description}</p>
-          <button class="ev-register-btn ev-reg-btn" data-event-id={e.id}>
-            {registeredIds.has(e.id) ? "Unregister" : "Register"}
-          </button>
-        </article>
-        ))}
-      </div>
-    </div>
-
-    <div id="ev-view-calendar" style="display:none">
-      {myCalendarEvents.length === 0 ? (
-        <p class="ev-empty">You haven''t registered for any upcoming events yet. Browse the "All Events" tab to find events to join.</p>
-      ) : (
-        <div class="ev-grid">
-          {myCalendarEvents.map((e) => (
-          <article class="ev-card" data-event-id={e.id}>
-            <div class={`ev-card-icon ev-card-icon-${e.category?.toLowerCase().slice(0, 5) || "general"}`}>
-              <span class="material-symbols-outlined">{e.icon || "event"}</span>
-            </div>
-            <div class="ev-card-category">{e.category}</div>
-            <div class="ev-card-date">{new Date(e.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
-            <h3 class="ev-card-title">{e.title}</h3>
-            <p class="ev-card-desc">{e.description}</p>
-            <button class="ev-register-btn ev-reg-btn" data-event-id={e.id}>Unregister</button>
-          </article>
-          ))}
         </div>
-      )}
-    </div>
 
-    <div id="ev-view-past" style="display:none">
-      {pastEvents.length === 0 ? (
-        <p class="ev-empty">No past events yet.</p>
-      ) : (
-        <div class="ev-grid">
-          {pastEvents.map((e) => (
-          <article class="ev-card ev-card-past" data-event-id={e.id}>
-            <div class={`ev-card-icon ev-card-icon-${e.category?.toLowerCase().slice(0, 5) || "general"}`}>
-              <span class="material-symbols-outlined">{e.icon || "event"}</span>
+        <div id="sv-ev-view-calendar" style="display:none">
+          {myCalendarEvents.length === 0 ? (
+            <p class="sv-ev-empty">You haven't registered for any upcoming events yet.</p>
+          ) : (
+            <div class="sv-ev-grid">
+              {myCalendarEvents.map((e: any) => (
+              <article class="sv-ev-card" data-event-id={e.id}>
+                <div class={`sv-ev-card-icon sv-ev-card-icon-${e.category?.toLowerCase().slice(0, 5) || "general"}`}>
+                  <span class="material-symbols-outlined">{e.icon || "event"}</span>
+                </div>
+                <div class="sv-ev-card-category">{e.category}</div>
+                <div class="sv-ev-card-date">{new Date(e.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+                <h3 class="sv-ev-card-title">{e.title}</h3>
+                <p class="sv-ev-card-desc">{e.description}</p>
+                <button class="sv-ev-register-btn sv-ev-reg-btn" data-event-id={e.id}>Unregister</button>
+              </article>
+              ))}
             </div>
-            <div class="ev-card-category">{e.category}</div>
-            <div class="ev-card-date">{new Date(e.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
-            <h3 class="ev-card-title">{e.title}</h3>
-            <p class="ev-card-desc">{e.description}</p>
-            <div class="ev-past-badge">Completed</div>
-          </article>
-        ))}
+          )}
         </div>
-      )}
-    </div>
+
+        <div id="sv-ev-view-past" style="display:none">
+          {pastEvents.length === 0 ? (
+            <p class="sv-ev-empty">No past events yet.</p>
+          ) : (
+            <div class="sv-ev-grid">
+              {pastEvents.map((e: any) => (
+              <article class="sv-ev-card sv-ev-card-past" data-event-id={e.id}>
+                <div class={`sv-ev-card-icon sv-ev-card-icon-${e.category?.toLowerCase().slice(0, 5) || "general"}`}>
+                  <span class="material-symbols-outlined">{e.icon || "event"}</span>
+                </div>
+                <div class="sv-ev-card-category">{e.category}</div>
+                <div class="sv-ev-card-date">{new Date(e.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+                <h3 class="sv-ev-card-title">{e.title}</h3>
+                <p class="sv-ev-card-desc">{e.description}</p>
+                <div class="sv-ev-past-badge">Completed</div>
+              </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
   </div>
 </div>
-
-<script>
-import { createBrowserClient } from "@supabase/ssr";
-
-const supabase = createBrowserClient(
-  import.meta.env.PUBLIC_SUPABASE_URL,
-  import.meta.env.PUBLIC_SUPABASE_ANON_KEY
-);
-
-// Tab switching
-const tabs = document.querySelectorAll(".ev-tab");
-const viewAll = document.getElementById("ev-view-all");
-const viewCalendar = document.getElementById("ev-view-calendar");
-const viewPast = document.getElementById("ev-view-past");
-
-tabs.forEach((tab) => {
-  tab.addEventListener("click", async () => {
-    if (tab.classList.contains("active")) return;
-    tabs.forEach((t) => t.classList.remove("active"));
-    tab.classList.add("active");
-    viewAll.style.display = "none";
-    viewCalendar.style.display = "none";
-    viewPast.style.display = "none";
-    const tabName = tab.dataset.tab;
-    if (tabName === "all") viewAll.style.display = "";
-    else if (tabName === "calendar") viewCalendar.style.display = "";
-    else if (tabName === "past") viewPast.style.display = "";
-  });
-});
-
-async function toggleRegistration(eventId, btn) {
-  const isRegistered = btn.textContent.trim() === "Unregister";
-  if (isRegistered) {
-    const { error } = await supabase
-      .from("event_registrations")
-      .delete()
-      .eq("event_id", eventId);
-    if (error) { console.error(error); return; }
-    btn.textContent = "Register";
-    const icon = btn.closest(".ev-featured-card")?.querySelector(".ev-bookmark-btn span");
-    if (icon) icon.textContent = "bookmark_border";
-  } else {
-    const { error } = await supabase
-      .from("event_registrations")
-      .insert({ event_id: eventId });
-    if (error) { console.error(error); return; }
-    btn.textContent = "Unregister";
-    const icon = btn.closest(".ev-featured-card")?.querySelector(".ev-bookmark-btn span");
-    if (icon) icon.textContent = "bookmark";
-  }
-}
-
-document.addEventListener("click", (e) => {
-  const btn = e.target.closest(".ev-reg-btn");
-  if (btn) {
-    e.preventDefault();
-    toggleRegistration(btn.dataset.eventId, btn);
-  }
-});
-
-document.addEventListener("click", (e) => {
-  const btn = e.target.closest(".ev-bookmark-btn");
-  if (btn) {
-    e.preventDefault();
-    const eventId = btn.dataset.eventId;
-    const regBtn = document.querySelector(`.ev-reg-btn[data-event-id="${eventId}"]`);
-    if (regBtn) toggleRegistration(eventId, regBtn);
-  }
-});
-</script>
-
-<style is:global>
-  .ev-empty {
-    grid-column: 1 / -1;
-    text-align: center;
-    color: var(--color-outline);
-    font-family: Inter, sans-serif;
-    font-size: 0.95rem;
-    padding: 3rem 1rem;
-    background: var(--color-surface-container-low);
-    border-radius: 16px;
-  }
-
-  .ev-card-past { opacity: 0.65; }
-  .ev-past-badge {
-    display: inline-block;
-    padding: 0.3rem 0.8rem;
-    border-radius: 9999px;
-    background: var(--color-surface-variant);
-    color: var(--color-on-surface-variant);
-    font-family: Inter, sans-serif;
-    font-size: 0.75rem;
-    font-weight: 600;
-  }
-
-  .ev-content {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 2.5rem;
-  }
-
-  .ev-header { margin-bottom: 2rem; }
-  .ev-title { font-family: Inter, sans-serif; font-size: 28px; font-weight: 700; color: var(--color-on-surface); margin: 0; }
-  .ev-subtitle { font-family: Inter, sans-serif; font-size: 14px; color: var(--color-outline); margin: 0.25rem 0 0; }
-
-  .ev-tabs {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 2rem;
-    background: var(--color-surface-container-high);
-    border-radius: 9999px;
-    padding: 0.25rem;
-    width: fit-content;
-  }
-
-  .ev-tab {
-    padding: 0.55rem 1.5rem;
-    border: none;
-    border-radius: 9999px;
-    background: transparent;
-    color: var(--color-on-surface-variant);
-    font-family: Inter, sans-serif;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-
-  .ev-tab.active {
-    background: var(--color-surface);
-    color: var(--color-on-surface);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  }
-
-  .ev-featured-section {
-    display: flex;
-    gap: 1.5rem;
-    margin-bottom: 2.5rem;
-  }
-
-  .ev-featured-card {
-    flex: 2;
-    position: relative;
-    background: linear-gradient(135deg, var(--color-primary-container), var(--color-tertiary-container));
-    border-radius: 20px;
-    padding: 1.75rem;
-    color: var(--color-on-primary-container);
-  }
-
-  .ev-featured-badge {
-    display: inline-block;
-    padding: 0.3rem 0.8rem;
-    border-radius: 9999px;
-    background: #e74c3c;
-    color: #fff;
-    font-family: Inter, sans-serif;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 0.75rem;
-    width: fit-content;
-  }
-
-  .ev-featured-top { position: absolute; top: 1.25rem; right: 1.25rem; }
-
-  .ev-bookmark-btn {
-    background: rgba(255,255,255,0.2);
-    backdrop-filter: blur(4px);
-    border: none;
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: inherit;
-    transition: background 0.2s;
-  }
-
-  .ev-bookmark-btn:hover { background: rgba(255,255,255,0.35); }
-  .ev-bookmark-btn .material-symbols-outlined { font-size: 20px !important; }
-
-  .ev-featured-date {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-family: Inter, sans-serif;
-    font-size: 0.8rem;
-    opacity: 0.9;
-    margin-bottom: 1rem;
-  }
-
-  .ev-date-icon { font-size: 16px !important; }
-
-  .ev-featured-title {
-    font-family: Inter, sans-serif;
-    font-size: 22px;
-    font-weight: 700;
-    margin: 0 0 0.5rem;
-    line-height: 1.3;
-  }
-
-  .ev-featured-desc {
-    font-family: Inter, sans-serif;
-    font-size: 0.85rem;
-    line-height: 1.6;
-    opacity: 0.85;
-    margin: 0 0 1.25rem;
-    max-width: 500px;
-  }
-
-  .ev-join-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.6rem 1.5rem;
-    border: none;
-    border-radius: 9999px;
-    background: #fff;
-    color: #1a1a2e;
-    font-family: Inter, sans-serif;
-    font-size: 0.85rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: transform 0.15s;
-  }
-
-  .ev-join-btn:active { transform: scale(0.97); }
-  .ev-join-btn .material-symbols-outlined { font-size: 18px !important; }
-
-  .ev-upnext {
-    flex: 1;
-    background: var(--color-surface-container-low);
-    border-radius: 20px;
-    padding: 1.25rem;
-  }
-
-  .ev-upnext-header {
-    font-family: Inter, sans-serif;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--color-on-surface);
-    margin-bottom: 1rem;
-  }
-
-  .ev-upnext-list { display: flex; flex-direction: column; gap: 0.75rem; }
-
-  .ev-upnext-item {
-    padding: 0.6rem 0;
-    border-bottom: 1px solid var(--color-outline-variant);
-  }
-
-  .ev-upnext-item:last-child { border-bottom: none; }
-
-  .ev-upnext-time {
-    font-family: Inter, sans-serif;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--color-primary);
-    margin-bottom: 0.25rem;
-  }
-
-  .ev-upnext-row { display: flex; gap: 0.5rem; align-items: flex-start; }
-
-  .ev-upnext-icon { font-size: 20px !important; color: var(--color-outline); }
-
-  .ev-upnext-name {
-    font-family: Inter, sans-serif;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--color-on-surface);
-  }
-
-  .ev-upnext-desc {
-    font-family: Inter, sans-serif;
-    font-size: 0.7rem;
-    color: var(--color-outline);
-  }
-
-  .ev-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.25rem;
-  }
-
-  .ev-card {
-    background: var(--color-surface-container-low);
-    border-radius: 16px;
-    padding: 1.5rem;
-    transition: transform 0.15s, box-shadow 0.15s;
-  }
-
-  .ev-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-  }
-
-  .ev-card-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 1rem;
-  }
-
-  .ev-card-icon .material-symbols-outlined { font-size: 22px !important; }
-
-  .ev-card-icon-bio { background: #e3f2fd; color: #1565c0; }
-  .ev-card-icon-space { background: #f3e5f5; color: #7b1fa2; }
-  .ev-card-icon-brain { background: #fce4ec; color: #c62828; }
-  .ev-card-icon-mater { background: #e8f5e9; color: #2e7d32; }
-  .ev-card-icon-neuro { background: #fff3e0; color: #e65100; }
-  .ev-card-icon-clima { background: #e0f7fa; color: #00695c; }
-  .ev-card-icon-gener { background: #f5f5f5; color: #616161; }
-  .ev-card-icon-chemi { background: #f1f8e9; color: #558b2f; }
-  .ev-card-icon-cogni { background: #fce4ec; color: #c62828; }
-
-  .ev-card-category {
-    font-family: Inter, sans-serif;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--color-primary);
-    margin-bottom: 0.3rem;
-  }
-
-  .ev-card-date {
-    font-family: Inter, sans-serif;
-    font-size: 0.75rem;
-    color: var(--color-outline);
-    margin-bottom: 0.5rem;
-  }
-
-  .ev-card-title {
-    font-family: Inter, sans-serif;
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--color-on-surface);
-    margin: 0 0 0.4rem;
-  }
-
-  .ev-card-desc {
-    font-family: Inter, sans-serif;
-    font-size: 0.8rem;
-    color: var(--color-on-surface-variant);
-    line-height: 1.5;
-    margin: 0 0 1rem;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .ev-register-btn {
-    padding: 0.45rem 1.25rem;
-    border: 2px solid var(--color-primary);
-    border-radius: 9999px;
-    background: transparent;
-    color: var(--color-primary);
-    font-family: Inter, sans-serif;
-    font-size: 0.8rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .ev-register-btn:hover {
-    background: var(--color-primary);
-    color: var(--color-on-primary);
-  }
-
-  @media (max-width: 768px) {
-    .ev-content { padding: 1.5rem 1rem; }
-    .ev-title { font-size: 24px; }
-    .ev-featured-section { flex-direction: column; }
-    .ev-grid { grid-template-columns: 1fr; }
-    .ev-tabs { width: 100%; justify-content: center; }
-    .ev-featured-card { padding: 1.25rem; }
-    .ev-featured-title { font-size: 20px; }
-  }
-</style>

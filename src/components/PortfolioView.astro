@@ -1,7 +1,6 @@
 ---
 export interface Props {
-  profile: Record<string, any>;
-  sessionUser: Record<string, any> | null;
+  profile: any;
   isOwner: boolean;
   isApproved: boolean;
   avatarUrl: string | null;
@@ -9,11 +8,6 @@ export interface Props {
   campusName: string;
   mentorName: string;
   portfolioUrl: string;
-  userPosts: any[];
-  portfolioLikeMap: Map<string, number>;
-  portfolioLikedPosts: Set<string>;
-  milestones: { title: string; issuer: string; url: string }[];
-  socialLinks: { platform: string; value: string }[];
   projectTitle: string;
   projectDescription: string;
   projectProgress: number;
@@ -27,38 +21,33 @@ export interface Props {
   techStack: string[];
   repoUrl: string;
   deployUrl: string;
+  milestones: { title: string; issuer: string; url: string }[];
+  socialLinks: { platform: string; value: string }[];
   legacyAchievements: string[];
+  userPosts: any[];
+  portfolioLikeMap: Map<string, number>;
+  portfolioLikedPosts: Set<string>;
 }
 
 const {
-  profile,
-  isOwner,
-  isApproved,
-  avatarUrl,
-  dastharUrl,
-  campusName,
-  mentorName,
-  portfolioUrl,
-  userPosts,
-  portfolioLikeMap,
-  portfolioLikedPosts,
-  milestones,
-  socialLinks,
-  projectTitle,
-  projectDescription,
-  projectProgress,
-  academicTier,
-  courseName,
-  jobTitle,
-  organisation,
-  isAlumni,
-  techStack,
-  repoUrl,
-  deployUrl,
-  legacyAchievements,
+  profile, isOwner, isApproved, avatarUrl, dastharUrl, campusName, mentorName, portfolioUrl,
+  projectTitle, projectDescription, projectProgress, githubHandle, linkedinUrl,
+  academicTier, courseName, jobTitle, organisation, isAlumni, techStack,
+  repoUrl, deployUrl, milestones, socialLinks, legacyAchievements,
+  userPosts, portfolioLikeMap, portfolioLikedPosts,
 } = Astro.props;
 
-// Platform icon/URL mapping
+function getTimeAgo(dateStr: string): string {
+  const now = new Date();
+  const d = new Date(dateStr);
+  const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 const platformConfig: Record<string, { icon: string; urlPrefix: string }> = {
   GitHub: { icon: "github", urlPrefix: "https://github.com/" },
   LinkedIn: { icon: "linkedin", urlPrefix: "" },
@@ -87,1084 +76,243 @@ function getSocialUrl(platform: string, value: string): string {
 }
 
 function platformLogo(platform: string): string {
-  const svgAttrs = 'class="pp-social-icon" viewBox="0 0 24 24" fill="currentColor"';
+  const svgAttrs = 'class="sv-social-icon" viewBox="0 0 24 24" fill="currentColor"';
   const svgs: Record<string, string> = {
     GitHub: `<svg ${svgAttrs}><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>`,
     LinkedIn: `<svg ${svgAttrs}><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>`,
     "X / Twitter": `<svg ${svgAttrs}><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`,
     Instagram: `<svg ${svgAttrs}><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>`,
     YouTube: `<svg ${svgAttrs}><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`,
-    Discord: `<svg ${svgAttrs}><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg>`,
-    TikTok: `<svg ${svgAttrs}><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>`,
-    Snapchat: `<svg ${svgAttrs}><path d="M12.206.793c.99 0 4.792.327 6.413 4.86.482 1.349.32 2.965.163 4.21-.074.591-.148 1.181-.148 1.526 0 .424.245.603.564.774.327.175.689.36.995.58 1.072.766 1.516 1.764 1.329 2.58-.175.758-1.045 1.515-3.04 1.655-.3.022-.481.148-.573.364-.26.595-.79 1.167-1.856 1.416-1.393.326-2.371-.133-2.85-.406-.296-.169-.631-.338-.981-.338-.368 0-.694.176-.99.342-1.092.637-2.163.54-2.86.05-.446-.313-.835-.706-1.367-.626-.649.1-2.144.502-2.142 1.332 0 .75 2.09 1.193 2.647 1.352.86.245.78.54.582 1.15-.183.56-.48 1.15.399 1.421.436.136 1.48.025 2.07.273.315.131.536.532.648.874.177.54.246 1.18.787 1.617 1.074.867 2.225.467 3.107-.076.18-.11.414-.332.633-.332.22 0 .454.222.634.332.882.543 2.033.943 3.107.076.541-.437.61-1.078.787-1.617.112-.342.333-.743.648-.874.59-.248 1.634-.137 2.07-.273.879-.271.582-.861.399-1.42-.198-.611-.278-.906.582-1.151.557-.16 2.647-.601 2.647-1.352 0-.5-.437-.838-1.06-1.082-.489-.191-1.275-.574-1.602-.706-.344-.14-.548-.455-.497-.912.038-.35.095-.715.15-1.076.16-1.04.323-2.107.156-3.107-1.054-6.296-5.728-7.573-9.248-7.573-3.52 0-8.194 1.277-9.248 7.573-.167 1-.004 2.067.156 3.107.055.361.112.725.15 1.076.05.457-.154.772-.497.912-.327.132-1.113.515-1.602.706-.623.244-1.06.582-1.06 1.082 0 .751 2.09 1.193 2.647 1.352.86.245.78.54.582 1.15-.183.56-.48 1.15.399 1.421.436.136 1.48.025 2.07.273.315.131.536.532.648.874.177.54.246 1.18.787 1.617 1.074.867 2.225.467 3.107-.076.18-.11.414-.332.633-.332.22 0 .454.222.634.332.882.543 2.033.943 3.107.076.541-.437.61-1.078.787-1.617.112-.342.333-.743.648-.874.59-.248 1.634-.137 2.07-.273.879-.271.582-.861.399-1.42-.198-.611-.278-.906.582-1.151.557-.16 2.647-.601 2.647-1.352 0-.424-.245-.603-.564-.774a5.8 5.8 0 01-.995-.58c-.319-.171-.564-.35-.564-.774 0-.345.074-.935.148-1.526.163-1.245.319-2.861-.163-4.21-1.621-4.533-5.423-4.86-6.413-4.86z"/></svg>`,
-    Facebook: `<svg ${svgAttrs}><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`,
-    Reddit: `<svg ${svgAttrs}><path d="M12 0A12 12 0 0012 24 12 12 0 0012 0zM18.19 8.44a1.81 1.81 0 011.81 1.81c0 .75-.46 1.39-1.11 1.66.04.14.06.29.06.44 0 2.24-3.16 4.06-6.95 4.06S5.05 14.59 5.05 12.35c0-.15.02-.3.06-.44a1.81 1.81 0 01-.69-1.43c0-1 .81-1.81 1.81-1.81.46 0 .88.17 1.2.46 1.06-.73 2.5-1.19 4.1-1.24l.77-3.56.02-.01c.02-.01.04-.01.06-.01.78 0 1.41.63 1.41 1.41 0 .42-.18.8-.47 1.06.3.13.57.31.8.53.31-.27.73-.44 1.19-.44zM9.9 10.6a1.11 1.11 0 00-1.1 1.1c0 .61.5 1.1 1.1 1.1s1.1-.49 1.1-1.1-.49-1.1-1.1-1.1zm4.2 0a1.11 1.11 0 00-1.1 1.1c0 .61.5 1.1 1.1 1.1s1.1-.49 1.1-1.1-.49-1.1-1.1-1.1zm-2.1 4.66c-.18 0-.33.06-.47.17-.26.21-.6.33-.97.33s-.71-.12-.97-.33a.63.63 0 00-.87.09c-.22.26-.19.65.07.87.5.4 1.12.62 1.77.62s1.27-.22 1.77-.62c.26-.22.29-.61.07-.87a.63.63 0 00-.4-.19zm.3-3.56a1.11 1.11 0 100 2.22 1.11 1.11 0 000-2.22zm-4.2 0a1.11 1.11 0 100 2.22 1.11 1.11 0 000-2.22z"/></svg>`,
-    Threads: `<svg ${svgAttrs}><path d="M12.17 2.27c-2.65-.26-5.49.63-7.45 2.77C2.97 7.14 2.24 10.28 2.1 13.55c-.15 3.27.36 6.28 2.45 8.41 1.65 1.69 3.9 2.62 6.15 2.76 2.47.15 5.05-.47 6.97-2.4 1.96-1.96 2.8-4.87 2.32-8.35-.33-2.4-1.45-4.03-3.21-5-.88-.49-1.85-.73-2.79-.83-.46-.05-.89-.05-1.27-.02-.65.05-1.08.19-1.4.35-.17.09-.33.19-.46.3-.12.11-.19.17-.24.2-.02.01-.01.01 0 .03.02.05.08.14.22.28.2.22.49.49.83.78.52.45 1.17.96 1.65 1.48.27.29.45.57.55.87.07.19.09.38.05.55-.09.35-.37.56-.73.56-.16 0-.34-.03-.53-.1-.6-.21-1.22-.49-1.9-.81-.71-.33-1.4-.72-2.04-1.19-.23-.17-.45-.35-.62-.54-.02-.03-.05-.06-.07-.09-.7.95-1.06 2.09-1.01 3.34.06 1.32.45 2.42 1.15 3.26.63.76 1.41 1.11 2.23 1.09.68-.02 1.25-.24 1.73-.61.5-.38.86-.91 1.16-1.5.25-.49.44-1.06.6-1.62.05-.16.09-.33.13-.49.05-.18.09-.37.14-.53.04-.11.07-.21.1-.3l.01-.02.03-.08.09-.15c.05-.06.11-.12.2-.13.09-.02.18.02.28.07.18.1.32.27.44.51.18.36.28.83.3 1.33v.01c.01.32.01.66-.05 1.02-.09.58-.33 1.18-.72 1.74-.38.54-.87 1.03-1.46 1.39-.59.36-1.25.58-1.99.61-1.05.04-2.08-.25-3.06-.84-1.04-.63-1.88-1.65-2.5-2.95-.63-1.33-.99-2.92-1.03-4.67-.04-1.82.27-3.56.96-5.07.69-1.49 1.71-2.7 2.96-3.56 1.28-.88 2.79-1.37 4.42-1.4 1.01-.02 2.02.15 2.98.48.99.33 1.94.86 2.78 1.57.84.71 1.57 1.6 2.12 2.66.55 1.06.9 2.32 1.01 3.75.15 1.88-.03 3.7-.53 5.36-.18.6-.43 1.18-.72 1.73-.27.53-.59 1.01-.95 1.43-.57.67-1.15 1.1-1.69 1.4-.38.21-.77.33-1.1.37-.31.04-.57 0-.75-.13-.06-.05-.09-.1-.12-.15-.03-.08-.04-.19.01-.34.04-.11.12-.24.26-.38.19-.19.47-.41.79-.66.46-.37.97-.83 1.39-1.34.42-.51.76-1.05 1-1.6.47-1.09.69-2.14.61-3.05-.01-.13-.03-.26-.05-.38z"/></svg>`,
-    Bluesky: `<svg ${svgAttrs}><path d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.908 0 3.08 0 3.768c0 .69.378 5.65.624 6.479.815 2.736 3.713 3.66 6.383 3.364.136-.02.275-.039.415-.056-.138.022-.276.04-.415.056-3.912.58-7.387 2.005-2.83 7.078 5.013 5.19 6.87 1.513 8.823-2.308 1.953 3.821 3.81 7.498 8.823 2.308 4.557-5.073 1.082-6.498-2.83-7.078-.14-.017-.277-.035-.416-.056.14.017.278.035.415.056 2.67.297 5.568-.628 6.383-3.364.246-.828.624-5.79.624-6.478 0-.69-.139-1.861-.902-2.204-.659-.298-1.664-.62-5.3 1.24C16.046 4.748 13.087 8.687 12 10.8z"/></svg>`,
-    Medium: `<svg ${svgAttrs}><path d="M13.54 12a6.8 6.8 0 01-6.77 6.83A6.8 6.8 0 010 12a6.8 6.8 0 016.77-6.83A6.8 6.8 0 0113.54 12zm7.42 0c0 3.77-1.53 6.83-3.41 6.83s-3.41-3.06-3.41-6.83 1.52-6.83 3.41-6.83S20.96 8.23 20.96 12zm3.04 0c0 3.38-.54 6.12-1.2 6.12s-1.2-2.74-1.2-6.12.54-6.12 1.2-6.12S24 8.62 24 12z"/></svg>`,
-    "Stack Overflow": `<svg ${svgAttrs}><path d="M18.986 21.865v-6.404h2.134V24H1.844v-8.539h2.13v6.404h15.012zM6.111 19.731H16.85v-2.137H6.111v2.137zm.259-4.852l10.48 2.189.451-2.07-10.478-2.188-.453 2.069zm1.359-5.056l9.705 4.53.903-1.95-9.706-4.53-.902 1.95zm3.011-4.572l8.217 6.312 1.342-1.518-8.217-6.312-1.342 1.518zM15.781.001l-1.054 1.774 6.352 4.609 1.054-1.774L15.78.001z"/></svg>`,
-    ResearchGate: `<svg ${svgAttrs}><path d="M12.074 2.432c-3.524 0-6.381 2.855-6.381 6.379 0 3.526 2.857 6.381 6.381 6.381 3.524 0 6.38-2.855 6.38-6.381 0-3.524-2.856-6.379-6.38-6.379zm-1.75 4.619c.205 0 .368.013.481.038.191.043.334.121.428.234.096.112.144.252.144.421 0 .157-.039.29-.116.399-.079.111-.21.2-.395.266-.062.022-.178.043-.348.062a5.453 5.453 0 01-.587.047v1.141h.631c.278 0 .485.011.619.031.179.03.315.089.409.177.095.088.142.207.142.355 0 .167-.052.299-.157.399-.104.099-.266.168-.487.207-.146.027-.395.04-.746.04h-.411v2.002H8.756V7.051h1.568zm1.929 0h1.797l1.315 3.246h.034l1.289-3.246h1.68l-2.284 5.152h-1.648l-2.183-5.152z"/></svg>`,
-    "Google Scholar": `<svg ${svgAttrs}><path d="M12 2L1 8.6l3.1 1.8v5.5c0 1.5 3.5 2.7 7.9 2.7s7.9-1.2 7.9-2.7v-5.5l1.6-.9L12 2zm0 2.1l7.4 4.3-2.6 1.5-4.8-2.8-4.8 2.8-2.6-1.5L12 4.1zM6.8 14.4v-3.5L12 14.1l5.2-3.2v3.5c0 .5-2.2 1.1-5.2 1.1s-5.2-.6-5.2-1.1z"/></svg>`,
-    ORCID: `<svg ${svgAttrs}><path d="M12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zM7.369 4.378c.525 0 .947.431.947.947s-.422.947-.947.947a.95.95 0 01-.947-.947c0-.516.422-.947.947-.947zm-.722 3.038h1.444v10.041H6.647V7.416zm3.562 0h3.9c3.712 0 5.344 2.653 5.344 5.025 0 2.578-2.016 5.025-5.325 5.025h-3.919V7.416zm1.444 1.303v7.444h2.297c3.272 0 4.022-2.484 4.022-3.722 0-2.538-1.397-3.722-3.773-3.722h-2.546z"/></svg>`,
   };
-  return svgs[platform] || `<span class="pp-social-text">${platform.slice(0, 2).toUpperCase()}</span>`;
-}
-
-function getTimeAgo(dateStr: string): string {
-  const now = new Date();
-  const d = new Date(dateStr);
-  const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return svgs[platform] || "";
 }
 ---
 
-<div class="portfolio-view-content">
-  <div class="pp-left">
-    <!-- Profile Hero Card -->
-    <div class="pp-card pp-hero-card">
-      <div class="pp-hero-inner">
-        <div class="pp-hero-avatars">
-          {dastharUrl ? (
-            <img src={dastharUrl} alt={profile.display_name} class="pp-dasthar" />
-          ) : avatarUrl ? (
-            <img src={avatarUrl} alt={profile.display_name} class="pp-avatar" />
-          ) : (
-            <div class="pp-avatar pp-avatar-placeholder">
-              <span class="material-symbols-outlined">person</span>
-            </div>
-          )}
-        </div>
-        <div class="pp-hero-body">
-          <h1 class="pp-name">{profile.legal_name || profile.display_name || profile.username}</h1>
-          {profile.so_id && <code class="pp-so-id">{profile.so_id}</code>}
-          <div class="pp-meta">
-            {profile.father_name && (
-              <span class="pp-meta-item">
-                <span class="material-symbols-outlined pp-meta-icon">family_history</span>
-                {profile.father_name}
-              </span>
-            )}
-            <span class="pp-meta-item">
-              <span class="material-symbols-outlined pp-meta-icon">location_on</span>
-              {campusName || "Not affiliated"}
-            </span>
-            {mentorName && (
-              <span class="pp-meta-item">
-                <span class="material-symbols-outlined pp-meta-icon">school</span>
-                Assigned Mentor: {mentorName}
-              </span>
-            )}
-          </div>
-          {academicTier && <span class="pp-tier-badge">{academicTier}</span>}
-          {isAlumni && (
-            <div class="pp-alumni-block">
-              <span class="pp-alumni-badge">Alumni</span>
-              <span class="pp-alumni-detail">{jobTitle} &middot; {organisation}</span>
-            </div>
-          )}
-          {courseName && academicTier && ["UG","PG","PHD"].includes(academicTier) && (
-            <p class="pp-course-name">{courseName}</p>
-          )}
-          {profile.subjects && profile.subjects.length > 0 && (
-            <div class="pp-chips-wrap">
-              {profile.subjects.map((s: string) => (
-                <span class="pp-chip">{s}</span>
-              ))}
-            </div>
-          )}
-          {techStack.length > 0 && (
-            <div class="pp-chips-wrap pp-tech-wrap">
-              {techStack.map((t: string) => (
-                <span class="pp-chip pp-tech-chip">{t}</span>
-              ))}
-            </div>
-          )}
-          {profile.biography && profile.biography.trim() && (
-            <div class="pp-bio-summary">
-              <p class="pp-bio-summary-text">{profile.biography}</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-
-    {isOwner && !isApproved && (
-      <div class="pp-card pp-pending-banner">
-        <span class="material-symbols-outlined">verified_user</span>
-        <div>
-          <strong>Verifying your account</strong>
-          <p>Your profile is being verified. An admin will approve your account shortly.</p>
-        </div>
-      </div>
-    )}
-
-    <!-- Mobile Sub Nav -->
-    <nav class="pp-mobile-tabs" id="mobile-tabs">
-      <button class="pp-mtab active" data-tab="posts">Posts</button>
-      <button class="pp-mtab" data-tab="achievements">Achievements</button>
-      {(socialLinks.length > 0 || isOwner) && <button class="pp-mtab" data-tab="connect">Connect</button>}
-      {projectTitle && <button class="pp-mtab" data-tab="project">Project</button>}
-    </nav>
-
-    <!-- Tab Panels -->
-    <div class="pp-tab-panel pp-tab-panel--active" data-tab="posts">
-      {userPosts && userPosts.length > 0 && (
-        <div class="pp-card pp-posts-card">
-          <h2 class="pp-section-title">
-            <span class="material-symbols-outlined pp-section-icon">dynamic_feed</span>
-            Posts
-          </h2>
-          <div class="pp-posts-list">
-            {userPosts.map((p: any) => (
-              <div class="pp-post-item">
-                <div class="pp-post-content">
-                  {p.title ? <h4 class="pp-post-title">{p.title}</h4> : null}
-                  {p.content ? <p class="pp-post-text">{p.content}</p> : null}
-                  {p.content ? <button class="pp-post-seemore" style="display:none">See more</button> : null}
-                  {p.image_url ? <img src={p.image_url} class="pp-post-image" alt="" loading="lazy" /> : null}
-                  {p.file_url ? <a href={p.file_url} target="_blank" class="pp-post-attach"><span class="material-symbols-outlined">description</span> {p.file_name || "Attachment"}</a> : null}
-                </div>
-                <div class="pp-post-meta-row">
-                  <span class="pp-post-time">{getTimeAgo(p.created_at)}</span>
-                  <button class="pp-like-btn" data-post-id={p.id} data-liked={portfolioLikedPosts.has(p.id) ? "true" : "false"}>
-                    <span class="material-symbols-outlined pp-like-icon">{portfolioLikedPosts.has(p.id) ? "favorite" : "favorite_border"}</span>
-                    <span class="pp-like-count">{portfolioLikeMap.get(p.id) || 0}</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {(!userPosts || userPosts.length === 0) && (
-        <div class="pp-card">
-          <p class="pp-empty">No posts yet.</p>
-        </div>
-      )}
-    </div>
-
-    <div class="pp-tab-panel" data-tab="achievements">
-      {(milestones.length > 0 || legacyAchievements.length > 0 || isOwner) && (
-        <div class="pp-card">
-          <h2 class="pp-section-title">
-            <span class="material-symbols-outlined pp-section-icon">emoji_events</span>
-            Verifiable Achievements
-          </h2>
-          <div class="pp-milestones-list">
-            {milestones.length > 0 ? milestones.map((m) => (
-              <div class="pp-milestone-row">
-                <div class="pp-milestone-left">
-                  <span class="material-symbols-outlined pp-milestone-badge">verified</span>
-                  <div>
-                    <h4 class="pp-milestone-title">{m.title}</h4>
-                    {m.issuer && <p class="pp-milestone-issuer">{m.issuer}</p>}
+<div id="portfolio-panel" class="sv-panel">
+  <div class="sv-pp-root">
+    <main class="sv-pp-main">
+      <div class="sv-pp-container">
+        <div class="sv-pp-left">
+          <div class="sv-pp-card sv-pp-hero-card">
+            <div class="sv-pp-hero-inner">
+              <div class="sv-pp-hero-avatars">
+                {dastharUrl ? (
+                  <img src={dastharUrl} alt={profile?.display_name} class="sv-pp-dasthar" />
+                ) : avatarUrl ? (
+                  <img src={avatarUrl} alt={profile?.display_name} class="sv-pp-avatar" />
+                ) : (
+                  <div class="sv-pp-avatar sv-pp-avatar-placeholder">
+                    <span class="material-symbols-outlined">person</span>
                   </div>
-                </div>
-                {m.url && (
-                  <a href={m.url} target="_blank" class="pp-milestone-link" title="Verify">
-                    <span class="material-symbols-outlined">open_in_new</span>
-                  </a>
                 )}
               </div>
-            )) : legacyAchievements.map((ach) => (
-              <div class="pp-milestone-row">
-                <div class="pp-milestone-left">
-                  <span class="material-symbols-outlined pp-milestone-badge">verified</span>
-                  <div>
-                    <h4 class="pp-milestone-title">{ach}</h4>
+              <div class="sv-pp-hero-body">
+                <h1 class="sv-pp-name">{profile?.legal_name || profile?.display_name || profile?.username}</h1>
+                {profile?.so_id && <code class="sv-pp-so-id">{profile.so_id}</code>}
+                <div class="sv-pp-meta">
+                  {profile?.father_name && (
+                    <span class="sv-pp-meta-item">
+                      <span class="material-symbols-outlined sv-pp-meta-icon">family_history</span>
+                      {profile.father_name}
+                    </span>
+                  )}
+                  <span class="sv-pp-meta-item">
+                    <span class="material-symbols-outlined sv-pp-meta-icon">location_on</span>
+                    {campusName || "Not affiliated"}
+                  </span>
+                  {mentorName && (
+                    <span class="sv-pp-meta-item">
+                      <span class="material-symbols-outlined sv-pp-meta-icon">school</span>
+                      Assigned Mentor: {mentorName}
+                    </span>
+                  )}
+                </div>
+                {academicTier && <span class="sv-pp-tier-badge">{academicTier}</span>}
+                {isAlumni && (
+                  <div class="sv-pp-alumni-block">
+                    <span class="sv-pp-alumni-badge">Alumni</span>
+                    <span class="sv-pp-alumni-detail">{jobTitle} &middot; {organisation}</span>
+                  </div>
+                )}
+                {courseName && academicTier && ["UG","PG","PHD"].includes(academicTier) && (
+                  <p class="sv-pp-course-name">{courseName}</p>
+                )}
+                {profile?.subjects && profile.subjects.length > 0 && (
+                  <div class="sv-pp-chips-wrap">
+                    {profile.subjects.map((s: string) => (
+                      <span class="sv-pp-chip">{s}</span>
+                    ))}
+                  </div>
+                )}
+                {techStack.length > 0 && (
+                  <div class="sv-pp-chips-wrap sv-pp-tech-wrap">
+                    {techStack.map((t: string) => (
+                      <span class="sv-pp-chip sv-pp-tech-chip">{t}</span>
+                    ))}
+                  </div>
+                )}
+                {profile?.biography && profile.biography.trim() && (
+                  <div class="sv-pp-bio-summary">
+                    <p class="sv-pp-bio-summary-text">{profile.biography}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {isOwner && !isApproved && (
+            <div class="sv-pp-card sv-pp-pending-banner">
+              <span class="material-symbols-outlined">verified_user</span>
+              <div>
+                <strong>Verifying your account</strong>
+                <p>Your profile is being verified. An admin will approve your account shortly.</p>
+              </div>
+            </div>
+          )}
+
+          <nav class="sv-pp-mobile-tabs" id="sv-mobile-tabs">
+            <button class="sv-pp-mtab active" data-tab="posts">Posts</button>
+            <button class="sv-pp-mtab" data-tab="achievements">Achievements</button>
+            {(socialLinks.length > 0 || isOwner) && <button class="sv-pp-mtab" data-tab="connect">Connect</button>}
+            {projectTitle && <button class="sv-pp-mtab" data-tab="project">Project</button>}
+          </nav>
+
+          <div class="sv-pp-tab-panel sv-pp-tab-panel--active" data-tab="posts">
+            {userPosts && userPosts.length > 0 ? (
+              <div class="sv-pp-card sv-pp-posts-card">
+                <h2 class="sv-pp-section-title">
+                  <span class="material-symbols-outlined sv-pp-section-icon">dynamic_feed</span>
+                  Posts
+                </h2>
+                <div class="sv-pp-posts-list">
+                  {userPosts.map((p: any) => (
+                    <div class="sv-pp-post-item">
+                      <div class="sv-pp-post-content">
+                        {p.title ? <h4 class="sv-pp-post-title">{p.title}</h4> : null}
+                        {p.content ? <p class="sv-pp-post-text">{p.content}</p> : null}
+                        {p.content ? <button class="sv-pp-post-seemore" style="display:none">See more</button> : null}
+                        {p.image_url ? <img src={p.image_url} class="sv-pp-post-image" alt="" loading="lazy" /> : null}
+                        {p.file_url ? <a href={p.file_url} target="_blank" class="sv-pp-post-attach"><span class="material-symbols-outlined">description</span> {p.file_name || "Attachment"}</a> : null}
+                      </div>
+                      <div class="sv-pp-post-meta-row">
+                        <span class="sv-pp-post-time">{getTimeAgo(p.created_at)}</span>
+                        <button class="sv-pp-like-btn" data-post-id={p.id} data-liked={portfolioLikedPosts.has(p.id) ? "true" : "false"}>
+                          <span class="material-symbols-outlined sv-pp-like-icon">{portfolioLikedPosts.has(p.id) ? "favorite" : "favorite_border"}</span>
+                          <span class="sv-pp-like-count">{portfolioLikeMap.get(p.id) || 0}</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div class="sv-pp-card">
+                <p class="sv-pp-empty">No posts yet.</p>
+              </div>
+            )}
+          </div>
+
+          <div class="sv-pp-tab-panel" data-tab="achievements">
+            {(milestones.length > 0 || legacyAchievements.length > 0 || isOwner) && (
+              <div class="sv-pp-card">
+                <h2 class="sv-pp-section-title">
+                  <span class="material-symbols-outlined sv-pp-section-icon">emoji_events</span>
+                  Verifiable Achievements
+                </h2>
+                <div class="sv-pp-milestones-list">
+                  {milestones.length > 0 ? milestones.map((m) => (
+                    <div class="sv-pp-milestone-row">
+                      <div class="sv-pp-milestone-left">
+                        <span class="material-symbols-outlined sv-pp-milestone-badge">verified</span>
+                        <div>
+                          <h4 class="sv-pp-milestone-title">{m.title}</h4>
+                          {m.issuer && <p class="sv-pp-milestone-issuer">{m.issuer}</p>}
+                        </div>
+                      </div>
+                      {m.url && (
+                        <a href={m.url} target="_blank" class="sv-pp-milestone-link" title="Verify">
+                          <span class="material-symbols-outlined">open_in_new</span>
+                        </a>
+                      )}
+                    </div>
+                  )) : legacyAchievements.map((ach) => (
+                    <div class="sv-pp-milestone-row">
+                      <div class="sv-pp-milestone-left">
+                        <span class="material-symbols-outlined sv-pp-milestone-badge">verified</span>
+                        <div>
+                          <h4 class="sv-pp-milestone-title">{ach}</h4>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {milestones.length === 0 && legacyAchievements.length === 0 && (
+                    <p class="sv-pp-empty">No achievements added yet.</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div class="sv-pp-tab-panel" data-tab="connect">
+            <div class="sv-pp-card sv-pp-connect-card">
+              <div class="sv-pp-connect-header">
+                <h3 class="sv-pp-connect-title">Connect</h3>
+                {profile?.phone && <a href={`tel:${profile.phone}`} class="sv-pp-phone-link"><span class="material-symbols-outlined">call</span> {profile.phone}</a>}
+              </div>
+              <div class="sv-pp-social-row" set:html={socialLinks.map((sl) => {
+                const href = getSocialUrl(sl.platform, sl.value);
+                return `<a href="${href}" target="_blank" class="sv-pp-social-btn" title="${sl.platform}">${platformLogo(sl.platform)}</a>`;
+              }).join("")} />
+              {isOwner && (
+                <>
+                  <a href="/dashboard/edit" class="sv-pp-action-btn">Edit Portfolio</a>
+                  <button class="sv-pp-action-btn sv-pp-action-secondary" id="sv-copy-portfolio-link" data-url={portfolioUrl}>
+                    <span class="material-symbols-outlined" style="font-size:16px">link</span>
+                    Copy Portfolio Link
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div class="sv-pp-tab-panel" data-tab="project">
+            {projectTitle ? (
+              <div class="sv-pp-card">
+                <span class="sv-pp-project-badge">Current Project</span>
+                <div class="sv-pp-project-head">
+                  <h4 class="sv-pp-project-name">{projectTitle}</h4>
+                  <div class="sv-pp-project-links">
+                    {repoUrl && (
+                      <a href={repoUrl} target="_blank" class="sv-pp-project-link" title="Repository">
+                        <svg class="sv-social-icon" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                        </svg>
+                      </a>
+                    )}
+                    {deployUrl && (
+                      <a href={deployUrl} target="_blank" class="sv-pp-project-link" title="Live Site">
+                        <span class="material-symbols-outlined" style="font-size:16px">open_in_new</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+                {projectDescription && <p class="sv-pp-project-desc">{projectDescription}</p>}
+                <div class="sv-pp-progress-section">
+                  <div class="sv-pp-progress-labels">
+                    <span>Analysis Phase</span>
+                    <span>{projectProgress}%</span>
+                  </div>
+                  <div class="sv-pp-progress-track">
+                    <div class="sv-pp-progress-fill" style={`width:${projectProgress}%`}></div>
                   </div>
                 </div>
               </div>
-            ))}
-            {milestones.length === 0 && legacyAchievements.length === 0 && (
-              <p class="pp-empty">No achievements added yet.</p>
+            ) : (
+              <div class="sv-pp-card"><p class="sv-pp-empty">No current project.</p></div>
             )}
           </div>
         </div>
-      )}
-    </div>
-
-    <div class="pp-tab-panel" data-tab="connect">
-      <div class="pp-card pp-connect-card">
-        <div class="pp-connect-header">
-          <h3 class="pp-connect-title">Connect</h3>
-          {profile.phone && <a href={`tel:${profile.phone}`} class="pp-phone-link"><span class="material-symbols-outlined">call</span> {profile.phone}</a>}
-        </div>
-        <div class="pp-social-row" set:html={socialLinks.map((sl) => {
-          const href = getSocialUrl(sl.platform, sl.value);
-          const label = sl.platform;
-          return `<a href="${href}" target="_blank" class="pp-social-btn" title="${label}">${platformLogo(sl.platform)}</a>`;
-        }).join("")} />
-        {isOwner && (
-          <>
-            <a href="/dashboard/edit" class="pp-action-btn">Edit Portfolio</a>
-            <button class="pp-action-btn pp-action-secondary" id="copy-portfolio-link" data-url={portfolioUrl}>
-              <span class="material-symbols-outlined" style="font-size:16px">link</span>
-              Copy Portfolio Link
-            </button>
-          </>
-        )}
       </div>
-    </div>
-
-    <div class="pp-tab-panel" data-tab="project">
-      {projectTitle ? (
-        <div class="pp-card">
-          <span class="pp-project-badge">Current Project</span>
-          <div class="pp-project-head">
-            <h4 class="pp-project-name">{projectTitle}</h4>
-            <div class="pp-project-links">
-              {repoUrl && (
-                <a href={repoUrl} target="_blank" class="pp-project-link" title="Repository">
-                  <svg class="pp-social-icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-                  </svg>
-                </a>
-              )}
-              {deployUrl && (
-                <a href={deployUrl} target="_blank" class="pp-project-link" title="Live Site">
-                  <span class="material-symbols-outlined" style="font-size:16px">open_in_new</span>
-                </a>
-              )}
-            </div>
-          </div>
-          {projectDescription && <p class="pp-project-desc">{projectDescription}</p>}
-          <div class="pp-progress-section">
-            <div class="pp-progress-labels">
-              <span>Analysis Phase</span>
-              <span>{projectProgress}%</span>
-            </div>
-            <div class="pp-progress-track">
-              <div class="pp-progress-fill" style={`width:${projectProgress}%`}></div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div class="pp-card"><p class="pp-empty">No current project.</p></div>
-      )}
-    </div>
+    </main>
   </div>
 </div>
-
-<script>
-  import { createBrowserClient } from "@supabase/ssr";
-
-  // "See more" toggle for post content
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest(".pp-post-seemore");
-    if (!btn) return;
-    const text = btn.parentElement.querySelector(".pp-post-text");
-    if (!text) return;
-    text.classList.toggle("expanded");
-    btn.textContent = text.classList.contains("expanded") ? "Show less" : "See more";
-  });
-  document.querySelectorAll(".pp-post-text").forEach((el) => {
-    if (el.scrollHeight > el.clientHeight) {
-      const btn = el.parentElement.querySelector(".pp-post-seemore");
-      if (btn) btn.style.display = "";
-    }
-  });
-
-  // Copy portfolio link
-  const copyBtn = document.getElementById("copy-portfolio-link");
-  copyBtn?.addEventListener("click", async () => {
-    const url = copyBtn.getAttribute("data-url");
-    if (!url) return;
-    try {
-      await navigator.clipboard.writeText(url);
-      copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">check</span> Copied!';
-      setTimeout(() => {
-        copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">link</span> Copy Portfolio Link';
-      }, 2000);
-    } catch {
-      const ta = document.createElement("textarea");
-      ta.value = url;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-    }
-  });
-
-  // Mobile tab switching
-  const tabs = document.querySelectorAll(".pp-mtab");
-  const panels = document.querySelectorAll(".pp-tab-panel");
-  tabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      const target = tab.dataset.tab;
-      tabs.forEach((t) => t.classList.remove("active"));
-      tab.classList.add("active");
-      panels.forEach((p) => {
-        p.classList.toggle("pp-tab-panel--active", p.dataset.tab === target);
-      });
-    });
-  });
-
-  // Like / unlike on portfolio
-  document.querySelectorAll(".pp-like-btn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const postId = btn.dataset.postId;
-      const liked = btn.dataset.liked === "true";
-      const icon = btn.querySelector(".pp-like-icon");
-      const countEl = btn.querySelector(".pp-like-count");
-      const supabase = createBrowserClient(
-        import.meta.env.PUBLIC_SUPABASE_URL,
-        import.meta.env.PUBLIC_SUPABASE_ANON_KEY
-      );
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      if (liked) {
-        const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", user.id);
-        if (error) { console.error(error); return; }
-        btn.dataset.liked = "false";
-        if (icon) icon.textContent = "favorite_border";
-        if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
-      } else {
-        const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: user.id });
-        if (error) { console.error(error); return; }
-        btn.dataset.liked = "true";
-        if (icon) icon.textContent = "favorite";
-        if (countEl) countEl.textContent = parseInt(countEl.textContent) + 1;
-      }
-    });
-  });
-</script>
-
-<style is:global>
-  .pp-main {
-    flex: 1;
-    overflow-y: auto;
-    padding: 2rem;
-  }
-
-  .pp-container {
-    max-width: 1280px;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-
-  /* ── Card base ── */
-  .pp-card {
-    background: #f7f9fc;
-    border-radius: 16px;
-    padding: 1.5rem;
-    box-shadow: 8px 8px 16px #D1D9E6, -8px -8px 16px #FFFFFF;
-    margin-bottom: 1.5rem;
-  }
-
-  /* ── Hero card ── */
-  .pp-hero-card {
-    background: linear-gradient(135deg, var(--color-surface), var(--color-surface-container-high));
-    border: 1px solid rgba(255,255,255,0.4);
-    box-shadow: 12px 12px 24px rgba(0,0,0,0.06), -8px -8px 16px rgba(255,255,255,0.8);
-  }
-
-  .pp-hero-inner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.25rem;
-  }
-
-  @media (min-width: 768px) {
-    .pp-hero-inner {
-      flex-direction: row;
-      align-items: flex-start;
-    }
-  }
-
-  .pp-hero-avatars {
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    position: relative;
-  }
-
-  .pp-hero-avatars::after {
-    content: '';
-    position: absolute;
-    inset: -4px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--color-primary), var(--color-tertiary));
-    opacity: 0.15;
-    z-index: 0;
-  }
-
-  .pp-avatar, .pp-dasthar {
-    position: relative;
-    z-index: 1;
-    width: 128px;
-    height: 128px;
-    border-radius: 50%;
-    object-fit: cover;
-    box-shadow: 8px 8px 16px #D1D9E6, -8px -8px 16px #FFFFFF;
-    flex-shrink: 0;
-  }
-
-  .pp-avatar-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-surface-container-high);
-    color: var(--color-outline);
-  }
-
-  .pp-avatar-placeholder .material-symbols-outlined {
-    font-size: 3rem;
-  }
-
-  .pp-so-id {
-    display: inline-block;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--color-primary);
-    background: var(--color-primary-container);
-    padding: 0.15rem 0.5rem;
-    border-radius: var(--radius-sm);
-    letter-spacing: 0.03em;
-    margin-top: 0.15rem;
-  }
-
-  .pp-hero-body {
-    flex: 1;
-    text-align: center;
-  }
-
-  @media (min-width: 768px) {
-    .pp-hero-body {
-      text-align: left;
-    }
-  }
-
-  .pp-name {
-    font-family: var(--font-headline);
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--color-on-surface);
-    margin: 0;
-    letter-spacing: -0.02em;
-  }
-
-  .pp-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    margin: 0.5rem 0 0.75rem;
-  }
-
-  .pp-meta-item {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 13px;
-    color: var(--color-on-surface-variant);
-  }
-
-  .pp-meta-icon {
-    font-size: 16px !important;
-    color: var(--color-primary);
-  }
-
-  .pp-course-name {
-    border-radius: 12px;
-    background: #f7f9fc;
-    box-shadow: inset 3px 3px 6px #D1D9E6, inset -3px -3px 6px #FFFFFF;
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 12px;
-    font-weight: 600;
-    color: #475569;
-  }
-
-  .pp-tier-badge {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 0.2rem 0.6rem;
-    border-radius: var(--radius-xl);
-    background: var(--color-primary-container);
-    color: var(--color-primary);
-    letter-spacing: 0.03em;
-    margin-top: 0.5rem;
-  }
-
-  .pp-alumni-block {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .pp-alumni-badge {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 0.15rem 0.5rem;
-    border-radius: var(--radius-sm);
-    background: #dbeafe;
-    color: #1d4ed8;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .pp-alumni-detail {
-    font-size: 13px;
-    color: var(--color-on-surface-variant);
-  }
-
-  .pp-course-name {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--color-tertiary);
-    margin: 0.35rem 0 0;
-  }
-
-  .pp-chips-wrap {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    margin-bottom: 0.5rem;
-    justify-content: center;
-  }
-
-  @media (min-width: 768px) {
-    .pp-chips-wrap { justify-content: flex-start; }
-  }
-
-  .pp-chip {
-    padding: 0.3rem 0.8rem;
-    background: #f7f9fc;
-    box-shadow: 4px 4px 8px #D1D9E6, -4px -4px 8px #FFFFFF;
-    color: #1e293b;
-    font-size: 11px;
-    font-weight: 500;
-    border-radius: 9999px;
-  }
-
-  .pp-tech-wrap { margin-top: 0.25rem; }
-
-  .pp-tech-chip {
-    box-shadow: inset 2px 2px 4px #D1D9E6, inset -2px -2px 4px #FFFFFF;
-    color: #64748b;
-    font-size: 10px;
-  }
-
-  .pp-bio-summary {
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--color-outline-variant, #bacac8);
-  }
-
-  .pp-bio-summary-text {
-    font-size: 0.85rem;
-    line-height: 1.65;
-    color: var(--color-on-surface-variant, #3b4948);
-    margin: 0;
-    white-space: pre-line;
-  }
-
-  /* ── Achievements ── */
-  .pp-section-title {
-    font-family: Sora, sans-serif;
-    font-size: 18px;
-    font-weight: 700;
-    color: #1e293b;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0 0 1rem;
-  }
-
-  .pp-section-icon {
-    color: #0d9488;
-    font-size: 22px !important;
-  }
-
-  .pp-milestones-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .pp-milestone-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 1rem;
-    border-radius: 12px;
-    background: #f7f9fc;
-    box-shadow: inset 3px 3px 6px #D1D9E6, inset -3px -3px 6px #FFFFFF;
-  }
-
-  .pp-milestone-left {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .pp-milestone-badge {
-    font-size: 20px !important;
-    color: #059669;
-    background: #ecfdf5;
-    border-radius: 50%;
-    padding: 4px;
-  }
-
-  .pp-milestone-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: #1e293b;
-    margin: 0;
-  }
-
-  .pp-milestone-issuer {
-    font-size: 11px;
-    color: #64748b;
-    margin: 0.1rem 0 0;
-  }
-
-  .pp-milestone-link {
-    padding: 0.35rem;
-    border-radius: 8px;
-    background: #f7f9fc;
-    box-shadow: 3px 3px 6px #D1D9E6, -3px -3px 6px #FFFFFF;
-    color: #64748b;
-    text-decoration: none;
-    transition: color 0.15s;
-  }
-
-  .pp-milestone-link:hover {
-    color: #0d9488;
-    text-decoration: none;
-  }
-
-  .pp-milestone-link .material-symbols-outlined {
-    font-size: 16px !important;
-  }
-
-  .pp-empty {
-    color: #94a3b8;
-    font-size: 13px;
-    text-align: center;
-    padding: 1rem;
-  }
-
-  /* ── Right column Connect ── */
-  .pp-connect-title {
-    text-align: center;
-    font-family: Sora, sans-serif;
-    font-size: 16px;
-    font-weight: 700;
-    color: #1e293b;
-    margin: 0;
-  }
-
-  .pp-connect-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.35rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .pp-phone-link {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 13px;
-    color: var(--color-primary);
-    text-decoration: none;
-    font-weight: 600;
-  }
-
-  .pp-phone-link .material-symbols-outlined {
-    font-size: 16px;
-  }
-
-  .pp-social-row {
-    display: flex;
-    justify-content: center;
-    gap: 0.75rem;
-    padding-bottom: 0.75rem;
-    margin-bottom: 0.75rem;
-    border-bottom: 1px solid #e2e8f0;
-  }
-
-  .pp-social-btn {
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
-    background: #f7f9fc;
-    box-shadow: 3px 3px 6px #D1D9E6, -3px -3px 6px #FFFFFF;
-    color: #475569;
-    text-decoration: none;
-    transition: color 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .pp-social-btn:hover {
-    color: #0d9488;
-    text-decoration: none;
-  }
-
-  .pp-social-icon {
-    width: 20px;
-    height: 20px;
-  }
-
-  .pp-social-text {
-    font-family: Inter, sans-serif;
-    font-size: 11px;
-    font-weight: 800;
-    line-height: 1;
-  }
-
-  .pp-social-btn .material-symbols-outlined {
-    font-size: 20px !important;
-  }
-
-  .pp-action-btn {
-    width: 100%;
-    display: block;
-    padding: 0.75rem;
-    border: none;
-    border-radius: 12px;
-    background: #f7f9fc;
-    box-shadow: 4px 4px 8px #D1D9E6, -4px -4px 8px #FFFFFF;
-    color: #475569;
-    font-family: Inter, sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.1s;
-    text-align: center;
-    text-decoration: none;
-    margin-bottom: 0.5rem;
-  }
-
-  .pp-action-btn:active {
-    transform: scale(0.98);
-  }
-
-  .pp-action-btn:hover {
-    text-decoration: none;
-    color: #0d9488;
-  }
-
-  .pp-action-secondary {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    font-size: 12px;
-  }
-
-  /* ── Current Project ── */
-  .pp-project-badge {
-    display: block;
-    font-size: 10px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #0d9488;
-    margin-bottom: 0.5rem;
-  }
-
-  .pp-project-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .pp-project-name {
-    font-family: Sora, sans-serif;
-    font-size: 15px;
-    font-weight: 700;
-    color: #1e293b;
-    margin: 0;
-  }
-
-  .pp-project-links {
-    display: flex;
-    gap: 0.25rem;
-  }
-
-  .pp-project-link {
-    padding: 0.3rem;
-    border-radius: 6px;
-    color: #94a3b8;
-    text-decoration: none;
-    transition: color 0.15s;
-  }
-
-  .pp-project-link:hover {
-    color: #0d9488;
-    text-decoration: none;
-  }
-
-  .pp-project-desc {
-    font-size: 12px;
-    color: #64748b;
-    line-height: 1.6;
-    margin: 0.5rem 0;
-  }
-
-  .pp-progress-section {
-    margin-top: 0.75rem;
-  }
-
-  .pp-progress-labels {
-    display: flex;
-    justify-content: space-between;
-    font-size: 10px;
-    font-weight: 600;
-    color: #94a3b8;
-    margin-bottom: 0.35rem;
-  }
-
-  .pp-progress-track {
-    width: 100%;
-    height: 8px;
-    background: #f7f9fc;
-    border-radius: 9999px;
-    box-shadow: inset 2px 2px 4px #D1D9E6, inset -2px -2px 4px #FFFFFF;
-    overflow: hidden;
-  }
-
-  .pp-progress-fill {
-    height: 100%;
-    background: #0d9488;
-    border-radius: 9999px;
-    transition: width 0.3s;
-  }
-
-  /* ── Mobile sub tabs ── */
-  .pp-mobile-tabs {
-    display: none;
-    gap: 0.25rem;
-    padding: 0 0.5rem;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .pp-mobile-tabs::-webkit-scrollbar { display: none; }
-
-  .pp-mtab {
-    flex-shrink: 0;
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 9999px;
-    background: transparent;
-    color: #64748b;
-    font-family: Inter, sans-serif;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s;
-    white-space: nowrap;
-  }
-  .pp-mtab.active {
-    background: #0d9488;
-    color: #fff;
-  }
-  .pp-mtab:hover:not(.active) {
-    background: #e2e8f0;
-  }
-
-  .pp-tab-panel {
-    display: block;
-  }
-
-  @media (max-width: 768px) {
-    .pp-tab-panel { display: none; }
-    .pp-tab-panel--active { display: block; }
-    .pp-mobile-tabs { display: flex; }
-    .pp-container { grid-template-columns: 1fr; }
-    .pp-avatar { width: 96px; height: 96px; }
-    .pp-name { font-size: 22px; }
-    .pp-hero-inner { flex-direction: column; align-items: center; }
-    .pp-hero-body { text-align: center; }
-    .pp-meta { align-items: center; }
-    .pp-chips-wrap { justify-content: center; }
-  }
-
-  /* ── Posts section ── */
-  .pp-posts-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .pp-post-item {
-    padding: 1rem;
-    border-radius: 12px;
-    background: #f7f9fc;
-    box-shadow: inset 3px 3px 6px #D1D9E6, inset -3px -3px 6px #FFFFFF;
-  }
-
-  .pp-post-title {
-    font-family: var(--font-headline);
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--color-on-surface, #0f172a);
-    margin: 0 0 0.35rem;
-    line-height: 1.4;
-  }
-
-  .pp-post-text {
-    margin: 0 0 0.5rem;
-    font-size: 14px;
-    line-height: 1.6;
-    color: #1e293b;
-    white-space: pre-wrap;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .pp-post-text.expanded {
-    -webkit-line-clamp: unset;
-  }
-  .pp-post-seemore {
-    background: none;
-    border: none;
-    color: #006a67;
-    font-weight: 600;
-    font-size: 0.8rem;
-    cursor: pointer;
-    padding: 0 0 4px;
-    font-family: "Inter", sans-serif;
-    display: block;
-  }
-  .pp-post-seemore:hover {
-    text-decoration: underline;
-  }
-
-  .pp-post-image {
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    border-radius: 8px;
-    background: linear-gradient(90deg, #eef1f5 25%, #e2e6ec 50%, #eef1f5 75%);
-    background-size: 200% 100%;
-    animation: pp-skeleton-shimmer 1.5s ease-in-out infinite;
-    display: block;
-  }
-
-  .pp-post-image[src] {
-    background: #eef1f5;
-    animation: none;
-    min-height: auto;
-  }
-
-  @keyframes pp-skeleton-shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-  }
-
-  .pp-post-attach {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.375rem 0.75rem;
-    background: #eef1f5;
-    border-radius: 6px;
-    color: #0d9488;
-    font-size: 13px;
-    text-decoration: none;
-    margin-top: 0.25rem;
-  }
-
-  .pp-post-attach:hover {
-    background: #e2e6ec;
-    text-decoration: none;
-  }
-
-  .pp-post-time {
-    display: block;
-    margin-top: 0.35rem;
-    font-size: 11px;
-    color: #94a3b8;
-  }
-
-  .pp-post-meta-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 0.35rem;
-  }
-
-  .pp-post-meta-row .pp-post-time {
-    margin-top: 0;
-  }
-
-  .pp-like-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.2rem;
-    background: none;
-    border: none;
-    color: #94a3b8;
-    font-family: Inter, sans-serif;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    padding: 0.15rem 0.4rem;
-    border-radius: 6px;
-    transition: all 0.15s;
-  }
-
-  .pp-like-btn:hover {
-    color: #e11d48;
-    background: #f1f5f9;
-  }
-
-  .pp-like-btn[data-liked="true"] {
-    color: #e11d48;
-  }
-
-  .pp-like-icon {
-    font-size: 16px !important;
-  }
-  .pp-like-btn[data-liked="true"] .pp-like-icon {
-    font-variation-settings: "FILL" 1;
-  }
-
-  .pp-pending-banner {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem 1.25rem;
-    background: #fff8e6;
-    border: 1px solid #f0d78a;
-    border-radius: 16px;
-    margin-bottom: 1rem;
-  }
-  .pp-pending-banner .material-symbols-outlined {
-    font-size: 28px;
-    color: #b8860b;
-  }
-  .pp-pending-banner strong {
-    display: block;
-    font-size: 14px;
-    color: #6b5200;
-    margin-bottom: 0.15rem;
-  }
-  .pp-pending-banner p {
-    margin: 0;
-    font-size: 13px;
-    color: #8a6b00;
-  }
-</style>

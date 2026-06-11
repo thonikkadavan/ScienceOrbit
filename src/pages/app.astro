@@ -2,22 +2,15 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import MobileAppShell from "../components/MobileAppShell.astro";
 import { createClient } from "../lib/supabase";
-import { getProfile, getSessionUser } from "../lib/auth";
+import { getProfile, getSessionUser, getProfileById } from "../lib/auth";
 
 const supabase = createClient({ request: Astro.request, cookies: Astro.cookies });
 const sessionUser = await getSessionUser(supabase);
 const profile = await getProfile(supabase);
 
-const isGuest = !profile;
 const avatarUrl = profile?.avatar_url
   ? supabase.storage.from("avatars").getPublicUrl(profile.avatar_url).data.publicUrl
   : null;
-const dastharUrl = profile?.dasthar_url
-  ? supabase.storage.from("dasthar").getPublicUrl(profile.dasthar_url).data.publicUrl
-  : null;
-const campusName = profile?.campuses?.name ?? "";
-const mentorName = profile?.mentors?.name || profile?.mentor_name;
-const portfolioUrl = profile ? `${Astro.url.origin}/dashboard?user=${profile.id}` : "";
 
 // ── Feed data ──
 const { data: newUsers } = await supabase
@@ -63,45 +56,55 @@ if (sessionUser && postIds.length) {
 }
 
 // ── Portfolio data ──
-const projectTitle = profile?.project_title || "";
-const projectDescription = profile?.project_description || "";
-const projectProgress = profile?.project_progress || 0;
-const githubHandle = profile?.github_handle || "";
-const linkedinUrl = profile?.linkedin_url || "";
-const academicTier = profile?.academic_tier || "";
-const courseName = profile?.course_name || "";
-const jobTitle = profile?.job_title || "";
-const organisation = profile?.organisation || "";
-const techStack: string[] = profile?.tech_stack || [];
-const repoUrl = profile?.repo_url || "";
-const deployUrl = profile?.deploy_url || "";
+const targetProfile = profile;
+const isOwner = sessionUser?.id === targetProfile?.id;
+const isApproved = targetProfile?.is_approved ?? false;
+
+const dastharUrl = targetProfile?.dasthar_url
+  ? supabase.storage.from("dasthar").getPublicUrl(targetProfile.dasthar_url).data.publicUrl
+  : null;
+
+const campusName = targetProfile?.campuses?.name ?? "";
+const mentorName = targetProfile?.mentors?.name || targetProfile?.mentor_name;
+const portfolioUrl = targetProfile ? `${Astro.url.origin}/dashboard?user=${targetProfile.id}` : "";
+const projectTitle = targetProfile?.project_title || "";
+const projectDescription = targetProfile?.project_description || "";
+const projectProgress = targetProfile?.project_progress || 0;
+const githubHandle = targetProfile?.github_handle || "";
+const linkedinUrl = targetProfile?.linkedin_url || "";
+const academicTier = targetProfile?.academic_tier || "";
+const courseName = targetProfile?.course_name || "";
+const jobTitle = targetProfile?.job_title || "";
+const organisation = targetProfile?.organisation || "";
+const isAlumni = !!(jobTitle && organisation);
+const techStack: string[] = targetProfile?.tech_stack || [];
+const repoUrl = targetProfile?.repo_url || "";
+const deployUrl = targetProfile?.deploy_url || "";
 
 let milestones: { title: string; issuer: string; url: string }[] = [];
 try {
-  milestones = typeof profile?.milestones === "string"
-    ? JSON.parse(profile.milestones)
-    : (profile?.milestones || []);
+  milestones = typeof targetProfile?.milestones === "string"
+    ? JSON.parse(targetProfile.milestones)
+    : (targetProfile?.milestones || []);
 } catch { milestones = []; }
 
 let socialLinks: { platform: string; value: string }[] = [];
 try {
-  socialLinks = typeof profile?.social_links === "string"
-    ? JSON.parse(profile.social_links)
-    : (profile?.social_links || []);
+  socialLinks = typeof targetProfile?.social_links === "string"
+    ? JSON.parse(targetProfile.social_links)
+    : (targetProfile?.social_links || []);
 } catch {}
 
-const legacyAchievements: string[] = profile?.achievements
-  ? profile.achievements.split("\n").filter(Boolean)
+const legacyAchievements: string[] = targetProfile?.achievements
+  ? targetProfile.achievements.split("\n").filter(Boolean)
   : [];
 
-const { data: userPosts } = profile
-  ? await supabase
-      .from("posts")
-      .select("id, content, title, created_at, image_url, file_url, file_name")
-      .eq("user_id", profile.id)
-      .order("created_at", { ascending: false })
-      .limit(20)
-  : { data: [] };
+const { data: userPosts } = await supabase
+  .from("posts")
+  .select("id, content, title, created_at, image_url, file_url, file_name")
+  .eq("user_id", targetProfile?.id || "")
+  .order("created_at", { ascending: false })
+  .limit(20);
 
 const userPostIds = (userPosts || []).map((p) => p.id);
 const { data: upLikes } = userPostIds.length
@@ -122,13 +125,11 @@ if (sessionUser && userPostIds.length) {
 }
 
 // ── Events data ──
-const { data: events } = profile
-  ? await supabase.from("events").select("*").order("event_date", { ascending: true })
-  : { data: [] };
-const { data: registrations } = profile
-  ? await supabase.from("event_registrations").select("event_id").eq("user_id", profile.id)
-  : { data: [] };
-
+const { data: events } = await supabase.from("events").select("*").order("event_date", { ascending: true });
+const { data: registrations } = await supabase
+  .from("event_registrations")
+  .select("event_id")
+  .eq("user_id", targetProfile?.id || "");
 const registeredIds = new Set((registrations || []).map((r) => r.event_id));
 const now = new Date().toISOString();
 const allEvents = events || [];
@@ -141,31 +142,40 @@ const gridEvents = upcomingEvents.filter((e) => !featuredEvent || e.id !== featu
 const myCalendarEvents = allEvents.filter((e) => registeredIds.has(e.id) && e.event_date >= now);
 ---
 
-<BaseLayout title="Science Orbit">
+<BaseLayout title="Mobile SPA">
   <MobileAppShell
-    profile={profile}
     sessionUser={sessionUser}
+    profile={profile}
     avatarUrl={avatarUrl}
-    postsWithAuthors={postsWithAuthors}
     newUsers={newUsers || []}
+    postsWithAuthors={postsWithAuthors}
     likeCountMap={likeCountMap}
     likedPosts={likedPosts}
-    isGuest={isGuest}
+    isOwner={isOwner}
+    isApproved={isApproved}
     dastharUrl={dastharUrl}
     campusName={campusName}
     mentorName={mentorName}
     portfolioUrl={portfolioUrl}
-    userPosts={userPosts || []}
-    portfolioLikeMap={portfolioLikeMap}
-    portfolioLikedPosts={portfolioLikedPosts}
-    milestones={milestones}
-    socialLinks={socialLinks}
     projectTitle={projectTitle}
     projectDescription={projectDescription}
     projectProgress={projectProgress}
+    githubHandle={githubHandle}
+    linkedinUrl={linkedinUrl}
+    academicTier={academicTier}
+    courseName={courseName}
+    jobTitle={jobTitle}
+    organisation={organisation}
+    isAlumni={isAlumni}
+    techStack={techStack}
     repoUrl={repoUrl}
     deployUrl={deployUrl}
+    milestones={milestones}
+    socialLinks={socialLinks}
     legacyAchievements={legacyAchievements}
+    userPosts={userPosts || []}
+    portfolioLikeMap={portfolioLikeMap}
+    portfolioLikedPosts={portfolioLikedPosts}
     events={allEvents}
     registeredIds={registeredIds}
     featuredEvent={featuredEvent}
@@ -173,5 +183,6 @@ const myCalendarEvents = allEvents.filter((e) => registeredIds.has(e.id) && e.ev
     gridEvents={gridEvents}
     myCalendarEvents={myCalendarEvents}
     pastEvents={pastEvents}
+    liveEvent={liveEvent}
   />
 </BaseLayout>
