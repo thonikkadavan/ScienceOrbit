@@ -1,6 +1,5 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import SplashScreen from "../../components/SplashScreen.astro";
 import DashboardSidebar from "../../components/DashboardSidebar.astro";
 import { createClient } from "../../lib/supabase";
 import { getProfile, getSessionUser } from "../../lib/auth";
@@ -72,7 +71,6 @@ function getTimeAgo(dateStr: string | null): string {
 ---
 
 <BaseLayout title="Academic Feed">
-  <SplashScreen autoHide={3000} />
   {profile ? <DashboardSidebar current="feed" /> : null}
   <div class="feed-root">
     <main class="feed-main">

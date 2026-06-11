@@ -6,7 +6,7 @@ const loginPrefill = Astro.url.searchParams.get("login") ?? Astro.url.searchPara
 ---
 
 <BaseLayout title="Login">
-  <SplashScreen autoHide={3000} />
+  <SplashScreen autoHide={3000} oncePerSession />
   <div class="auth-page">
     <div class="auth-card">
       <div class="auth-card-inner">

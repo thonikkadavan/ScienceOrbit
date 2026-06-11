@@ -3,12 +3,13 @@ export interface Props {
   title?: string;
   subtitle?: string;
   autoHide?: number;
+  oncePerSession?: boolean;
 }
 
-const { autoHide = 2500 } = Astro.props;
+const { autoHide = 2500, oncePerSession = false } = Astro.props;
 ---
 
-<div class="splash-overlay" id="splash-overlay" data-auto-hide={autoHide}>
+<div class="splash-overlay" id="splash-overlay" data-auto-hide={autoHide} data-once-per-session={oncePerSession}>
   <div class="splash-canvas">
     <div class="splash-content">
       <div class="splash-emblem">
@@ -38,7 +39,17 @@ const { autoHide = 2500 } = Astro.props;
   (function () {
     const overlay = document.getElementById("splash-overlay");
     const autoHideMs = parseInt(overlay?.dataset.autoHide || "2500", 10);
+    const oncePerSession = overlay?.dataset.oncePerSession === "true";
     let hidden = false;
+
+    if (oncePerSession && sessionStorage.getItem("_splash")) {
+      if (overlay?.parentNode) overlay.parentNode.removeChild(overlay);
+      return;
+    }
+
+    if (oncePerSession) {
+      sessionStorage.setItem("_splash", "1");
+    }
 
     window.hideSplash = function () {
       if (hidden) return;
