@@ -20,8 +20,8 @@ const mentors = (
   await supabase.from("mentors").select("*").order("name")
 ).data as Mentor[] | null;
 
-const avatarUrl = profile.avatar_url
-  ? supabase.storage.from("avatars").getPublicUrl(profile.avatar_url).data.publicUrl
+const avatarUrl = profile.dasthar_url
+  ? supabase.storage.from("dasthar").getPublicUrl(profile.dasthar_url).data.publicUrl
   : null;
 const avatarTag = avatarUrl
   ? `<img src="${avatarUrl}" alt="" class="mob-avatar-img" id="mob-avatar-img" />`
@@ -495,14 +495,14 @@ try {
         const filePath = `${user.id}/${Date.now()}.${ext}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("avatars")
+          .from("dasthar")
           .upload(filePath, file, { upsert: true });
 
         if (uploadError) throw uploadError;
 
         await supabase
           .from("profiles")
-          .update({ avatar_url: filePath })
+          .update({ dasthar_url: filePath })
           .eq("id", user.id);
       }
 

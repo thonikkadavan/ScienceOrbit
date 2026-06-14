@@ -15,8 +15,8 @@ if (!profile || !profile.is_approved) {
   return Astro.redirect("/404", 404);
 }
 
-const avatarUrl = profile.avatar_url
-  ? supabase.storage.from("avatars").getPublicUrl(profile.avatar_url).data.publicUrl
+const avatarUrl = profile.dasthar_url
+  ? supabase.storage.from("dasthar").getPublicUrl(profile.dasthar_url).data.publicUrl
   : null;
 
 const campusName = profile.campuses?.name ?? "";

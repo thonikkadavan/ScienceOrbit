@@ -9,9 +9,13 @@ const { current } = Astro.props;
 
 const supabase = createClient({ request: Astro.request, cookies: Astro.cookies });
 const { data: { user } } = await supabase.auth.getUser();
-const avatarUrl = user?.user_metadata?.avatar_url
-  ? supabase.storage.from("avatars").getPublicUrl(user.user_metadata.avatar_url).data.publicUrl
-  : null;
+let avatarUrl = null;
+if (user?.id) {
+  const { data: profile } = await supabase.from("profiles").select("dasthar_url").eq("id", user.id).single();
+  if (profile?.dasthar_url) {
+    avatarUrl = supabase.storage.from("dasthar").getPublicUrl(profile.dasthar_url).data.publicUrl;
+  }
+}
 ---
 
 <aside class="ds-sidebar">
@@ -21,6 +25,17 @@ const avatarUrl = user?.user_metadata?.avatar_url
       <span class="ds-brand-title">Science Orbit</span>
       <span class="ds-brand-sub">Digital Laboratory</span>
     </div>
+  </div>
+
+  <div class="ds-user">
+    {avatarUrl ? (
+      <img src={avatarUrl} alt="Profile" class="ds-user-avatar" />
+    ) : (
+      <div class="ds-user-avatar ds-user-placeholder">
+        <span class="material-symbols-outlined">person</span>
+      </div>
+    )}
+    <span class="ds-user-label">My Profile</span>
   </div>
 
   <nav class="ds-nav">
@@ -106,6 +121,46 @@ const avatarUrl = user?.user_metadata?.avatar_url
     border-radius: var(--radius-md);
     object-fit: cover;
     flex-shrink: 0;
+  }
+
+  .ds-user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .ds-user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .ds-user-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface-container-high);
+    color: var(--color-outline);
+  }
+
+  .ds-user-placeholder .material-symbols-outlined {
+    font-size: 22px;
+  }
+
+  .ds-user-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-on-surface);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .ds-sidebar:hover .ds-user-label {
+    opacity: 1;
   }
 
   .ds-brand-text { 

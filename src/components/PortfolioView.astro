@@ -5,7 +5,6 @@ export interface Props {
   isOwner: boolean;
   isApproved: boolean;
   avatarUrl: string | null;
-  dastharUrl: string | null;
   campusName: string;
   mentorName: string;
   portfolioUrl: string;
@@ -21,7 +20,7 @@ export interface Props {
   portfolioLikedPosts: Set<string>;
 }
 
-const { profile, sessionUser, isOwner, isApproved, avatarUrl, dastharUrl, campusName, mentorName, portfolioUrl, academicTier, courseName, jobTitle, organisation, isAlumni, milestones, socialLinks, userPosts, portfolioLikeMap, portfolioLikedPosts } = Astro.props;
+const { profile, sessionUser, isOwner, isApproved, avatarUrl, campusName, mentorName, portfolioUrl, academicTier, courseName, jobTitle, organisation, isAlumni, milestones, socialLinks, userPosts, portfolioLikeMap, portfolioLikedPosts } = Astro.props;
 
 // Platform icon/URL mapping
 const platformConfig: Record<string, { icon: string; urlPrefix: string }> = {
@@ -97,9 +96,7 @@ function getTimeAgo(dateStr: string): string {
             </button>
             <div class="pp-hero-inner">
               <div class="pp-hero-avatars">
-                {dastharUrl ? (
-                  <img src={dastharUrl} alt={profile.display_name} class="pp-dasthar" />
-                ) : avatarUrl ? (
+                {avatarUrl ? (
                   <img src={avatarUrl} alt={profile.display_name} class="pp-avatar" />
                 ) : (
                   <div class="pp-avatar pp-avatar-placeholder">
@@ -482,7 +479,7 @@ function getTimeAgo(dateStr: string): string {
     z-index: 0;
   }
 
-  .pp-avatar, .pp-dasthar {
+  .pp-avatar {
     position: relative;
     z-index: 1;
     width: 128px;

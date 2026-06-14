@@ -140,13 +140,14 @@ const loginPrefill = Astro.url.searchParams.get("login") ?? Astro.url.searchPara
   }
 
   .form-group input {
-    padding: 0.6rem 0.85rem;
+    padding: .6rem .85rem;
+    border-bottom: 1px solid #000000 !important;
     border: none;
     border-radius: var(--radius-default);
-    font-size: 0.9rem;
+    font-size: .9rem;
     outline: none;
-    background: var(--color-neu-base);
-    box-shadow: var(--shadow-recessed);
+    background: #f2f4f7;
+    box-shadow: inset -7px -5px 6px var(--color-neu-highlight);
     transition: box-shadow 0.15s;
   }
 

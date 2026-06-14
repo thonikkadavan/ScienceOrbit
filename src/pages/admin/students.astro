@@ -113,8 +113,8 @@ const campuses = (
               <tr data-id="${p.id}">
                 <td>
                   <div style="display:flex;align-items:center;gap:10px">
-                    ${getAvatarSrc(p.id, p.avatar_url)
-                      ? `<img src="${getAvatarSrc(p.id, p.avatar_url)}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;background:var(--color-surface-variant)" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />`
+                    ${getAvatarSrc(p.id, p.dasthar_url)
+                      ? `<img src="${getAvatarSrc(p.id, p.dasthar_url)}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;background:var(--color-surface-variant)" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />`
                       : ""
                     }
                     <div style="display:flex;flex-direction:column">
@@ -166,7 +166,7 @@ const campuses = (
       const supabase = await getSupabase();
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, username, legal_name, campus_id, batch, academic_tier, is_approved, avatar_url, created_at, campuses(name)")
+        .select("id, username, legal_name, campus_id, batch, academic_tier, is_approved, dasthar_url, created_at, campuses(name)")
         .eq("is_admin", false)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -202,14 +202,14 @@ const campuses = (
 
           const { data: profile } = await supabase
             .from("profiles")
-            .select("avatar_url")
+            .select("dasthar_url")
             .eq("id", id)
             .single();
 
-          if (profile?.avatar_url) {
+          if (profile?.dasthar_url) {
             await supabase.storage
-              .from("avatars")
-              .remove([profile.avatar_url]);
+              .from("dasthar")
+              .remove([profile.dasthar_url]);
           }
 
           const { error: deleteError } = await supabase
@@ -335,7 +335,7 @@ const campuses = (
       import.meta.env.PUBLIC_SUPABASE_URL,
       import.meta.env.PUBLIC_SUPABASE_ANON_KEY
     );
-    return sb.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+    return sb.storage.from("dasthar").getPublicUrl(path).data.publicUrl;
   }
 
   function escapeHtml(str) {
