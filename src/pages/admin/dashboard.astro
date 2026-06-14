@@ -7,16 +7,83 @@ const supabase = createClient({ request: Astro.request, cookies: Astro.cookies }
 const admin = await requireAdmin(supabase);
 if (!admin) return Astro.redirect("/login");
 
-const [{ count: pendingCount }, { count: studentCount }, { count: campusCount }] =
-  await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_approved", false).eq("is_admin", false),
-    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_admin", false),
-    supabase.from("campuses").select("*", { count: "exact", head: true }),
-  ]);
+const [
+  { count: pendingCount },
+  { count: studentCount },
+  { count: campusCount },
+  { count: postCount },
+  { count: mentorCount },
+] = await Promise.all([
+  supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_approved", false).eq("is_admin", false),
+  supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_admin", false),
+  supabase.from("campuses").select("*", { count: "exact", head: true }),
+  supabase.from("posts").select("*", { count: "exact", head: true }),
+  supabase.from("mentors").select("*", { count: "exact", head: true }),
+]);
+
+const { count: eventCount } = await supabase
+  .from("events")
+  .select("*", { count: "exact", head: true })
+  .gte("datetime", new Date().toISOString());
+
+// Fetch tier & batch distribution (all non-admin profiles, minimal columns)
+const { data: allProfiles } = await supabase
+  .from("profiles")
+  .select("academic_tier, batch, campus_id, created_at")
+  .eq("is_admin", false);
+
+const tierCounts: Record<string, number> = {};
+const batchCounts: Record<string, number> = {};
+const campusStudentCounts: Record<string, number> = {};
+const recentPending: any[] = [];
+
+if (allProfiles) {
+  for (const p of allProfiles) {
+    const t = p.academic_tier || "UNSET";
+    tierCounts[t] = (tierCounts[t] || 0) + 1;
+    const b = p.batch || "UNSET";
+    batchCounts[b] = (batchCounts[b] || 0) + 1;
+    if (p.campus_id) {
+      campusStudentCounts[p.campus_id] = (campusStudentCounts[p.campus_id] || 0) + 1;
+    }
+  }
+}
+
+// Fetch campuses with names
+const { data: campuses } = await supabase.from("campuses").select("id, name");
+
+// Build campus card data
+const campusCards = (campuses || []).map((c) => ({
+  name: c.name,
+  studentCount: campusStudentCounts[c.id] || 0,
+}));
+
+// Fetch last 5 pending for recent table
+const { data: pendingProfiles } = await supabase
+  .from("profiles")
+  .select("id, so_id, legal_name, display_name, username, father_name, phone, academic_tier, course_name, created_at, campuses(name)")
+  .eq("is_approved", false)
+  .eq("is_admin", false)
+  .order("created_at", { ascending: false })
+  .limit(5);
+
+const batchKeys = Object.keys(batchCounts).filter((b) => b !== "UNSET").sort((a, b) => Number(a) - Number(b));
+const totalBatches = batchKeys.length;
+
+const tierOrder = ["JUNIOR", "FOUNDATION", "UG", "PG", "PHD"];
+const tierColors: Record<string, string> = {
+  JUNIOR: "#dbeafe", FOUNDATION: "#d1fae5", UG: "#fef3c7", PG: "#e0e7ff", PHD: "#fce7f3",
+};
+const tierTextColors: Record<string, string> = {
+  JUNIOR: "#1d4ed8", FOUNDATION: "#047857", UG: "#b45309", PG: "#4338ca", PHD: "#be185d",
+};
+const maxBatchCount = Math.max(...batchKeys.map((b) => batchCounts[b] || 0), 1);
 ---
 
 <AdminLayout title="Dashboard" activeTab="dashboard">
-  <div style="max-width:1200px;margin:0 auto">
+  <div class="dash-wrap">
+
+    <!-- KPI Row -->
     <div class="kpi-grid">
       <a href="/admin" class="kpi-card">
         <div>
@@ -39,43 +106,288 @@ const [{ count: pendingCount }, { count: studentCount }, { count: campusCount }]
         </div>
         <div class="kpi-icon primary-container"><span class="material-symbols-outlined">location_city</span></div>
       </a>
+      <a href="/admin/feed-governance" class="kpi-card">
+        <div>
+          <p class="kpi-header">Total Posts</p>
+          <p class="kpi-value">{postCount ?? 0}</p>
+        </div>
+        <div class="kpi-icon" style="background:#f3e8ff;color:#7c3aed"><span class="material-symbols-outlined">dynamic_feed</span></div>
+      </a>
+      <a href="/admin/events-dispatcher" class="kpi-card">
+        <div>
+          <p class="kpi-header">Upcoming Events</p>
+          <p class="kpi-value">{eventCount ?? 0}</p>
+        </div>
+        <div class="kpi-icon" style="background:#fef3c7;color:#b45309"><span class="material-symbols-outlined">calendar_month</span></div>
+      </a>
+      <a href="/admin/identity-manager" class="kpi-card">
+        <div>
+          <p class="kpi-header">Mentors</p>
+          <p class="kpi-value">{mentorCount ?? 0}</p>
+        </div>
+        <div class="kpi-icon" style="background:#d1fae5;color:#047857"><span class="material-symbols-outlined">school</span></div>
+      </a>
+      <a href="/admin/students" class="kpi-card">
+        <div>
+          <p class="kpi-header">Active Batches</p>
+          <p class="kpi-value">{totalBatches}</p>
+        </div>
+        <div class="kpi-icon" style="background:#ffe4e6;color:#be185d"><span class="material-symbols-outlined">tag</span></div>
+      </a>
     </div>
 
-    <div class="quick-links" style="margin-top:2rem">
-      <h3 style="font-family:var(--font-label);font-size:15px;font-weight:600;color:var(--color-on-surface);margin-bottom:0.75rem">Quick Actions</h3>
+    <!-- Row: Tier Breakdown + Batch Distribution -->
+    <div class="dash-row">
+
+      <!-- Tier Breakdown -->
+      <div class="neu-card dash-half">
+        <h3 class="dash-section-title">Students by Academic Tier</h3>
+        <div class="tier-grid">
+          {tierOrder.map((tier) => {
+            const count = tierCounts[tier] || 0;
+            const pct = studentCount ? Math.round((count / studentCount) * 100) : 0;
+            return (
+              <div class="tier-stat-card">
+                <span class="tier-stat-badge" style={`background:${tierColors[tier] || "#f1f5f9"};color:${tierTextColors[tier] || "#475569"}`}>{tier}</span>
+                <span class="tier-stat-count">{count}</span>
+                <div class="tier-stat-bar">
+                  <div class="tier-stat-fill" style={`width:${pct}%;background:${tierTextColors[tier] || "#475569"}`}></div>
+                </div>
+                <span class="tier-stat-pct">{pct}%</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <!-- Batch Distribution -->
+      <div class="neu-card dash-half">
+        <h3 class="dash-section-title">Batch Distribution</h3>
+        <div class="batch-list">
+          {batchKeys.length === 0 ? (
+            <p class="empty-hint">No batches assigned yet.</p>
+          ) : (
+            batchKeys.map((b) => {
+              const count = batchCounts[b] || 0;
+              const pct = Math.round((count / maxBatchCount) * 100);
+              return (
+                <div class="batch-row">
+                  <span class="batch-label">Batch {b}</span>
+                  <div class="batch-bar-track">
+                    <div class="batch-bar-fill" style={`width:${pct}%`}></div>
+                  </div>
+                  <span class="batch-count">{count}</span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Row: Campus Overview + Recent Registrations -->
+    <div class="dash-row">
+
+      <!-- Campus Overview -->
+      <div class="neu-card dash-half">
+        <h3 class="dash-section-title">Campus Overview</h3>
+        <div class="campus-grid">
+          {campusCards.length === 0 ? (
+            <p class="empty-hint">No campuses configured.</p>
+          ) : (
+            campusCards.map((c) => (
+              <a href="/admin/campuses" class="campus-card">
+                <span class="campus-card-icon"><span class="material-symbols-outlined">location_city</span></span>
+                <div>
+                  <span class="campus-card-name">{c.name}</span>
+                  <span class="campus-card-count">{c.studentCount} student{c.studentCount !== 1 ? "s" : ""}</span>
+                </div>
+              </a>
+            ))
+          )}
+        </div>
+      </div>
+
+      <!-- Recent Registrations -->
+      <div class="neu-card dash-half">
+        <h3 class="dash-section-title">Recent Pending Registrations</h3>
+        {pendingProfiles && pendingProfiles.length > 0 ? (
+          <div class="recent-table-wrap">
+            <table class="dash-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Tier</th>
+                  <th>Campus</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingProfiles.map((p) => (
+                  <tr>
+                    <td><strong>{p.legal_name || p.display_name || p.username || "—"}</strong></td>
+                    <td>{p.academic_tier ? <span class={`tier-badge ${p.academic_tier}`}>{p.academic_tier}</span> : "—"}</td>
+                    <td>{p.campuses?.name || "—"}</td>
+                    <td style="font-size:12px;color:var(--color-on-surface-variant)">{new Date(p.created_at).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p class="empty-hint">No pending registrations.</p>
+        )}
+        <a href="/admin" class="dash-view-all">View all approvals →</a>
+      </div>
+
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-links">
+      <h3 class="dash-section-title">Quick Actions</h3>
       <div class="links-grid">
         <a href="/admin" class="action-card">
           <span class="material-symbols-outlined">checklist</span>
           <span>Approval Queue</span>
-          <span class="material-symbols-outlined arrow" style="color:var(--color-outline)">arrow_forward</span>
+          <span class="material-symbols-outlined arrow">arrow_forward</span>
         </a>
         <a href="/admin/students" class="action-card">
           <span class="material-symbols-outlined">group</span>
           <span>Student Directory</span>
-          <span class="material-symbols-outlined arrow" style="color:var(--color-outline)">arrow_forward</span>
+          <span class="material-symbols-outlined arrow">arrow_forward</span>
         </a>
         <a href="/admin/campuses" class="action-card">
           <span class="material-symbols-outlined">location_city</span>
           <span>Campus Management</span>
-          <span class="material-symbols-outlined arrow" style="color:var(--color-outline)">arrow_forward</span>
+          <span class="material-symbols-outlined arrow">arrow_forward</span>
         </a>
-        <a href="/admin/subjects" class="action-card">
-          <span class="material-symbols-outlined">biotech</span>
-          <span>Subject Management</span>
-          <span class="material-symbols-outlined arrow" style="color:var(--color-outline)">arrow_forward</span>
+        <a href="/admin/events-dispatcher" class="action-card">
+          <span class="material-symbols-outlined">calendar_month</span>
+          <span>Events Dispatcher</span>
+          <span class="material-symbols-outlined arrow">arrow_forward</span>
         </a>
         <a href="/dashboard" class="action-card">
           <span class="material-symbols-outlined">person</span>
           <span>My Student Profile</span>
-          <span class="material-symbols-outlined arrow" style="color:var(--color-outline)">arrow_forward</span>
+          <span class="material-symbols-outlined arrow">arrow_forward</span>
         </a>
       </div>
     </div>
+
   </div>
 </AdminLayout>
 
 <style is:global>
-  .quick-links { max-width: 500px; }
+  .dash-wrap { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+
+  /* Section Titles */
+  .dash-section-title {
+    font-family: var(--font-label);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-on-surface);
+    margin: 0 0 1rem;
+  }
+
+  /* Two-column row */
+  .dash-row { display: flex; gap: 1.25rem; }
+  .dash-half { flex: 1; min-width: 0; }
+  @media (max-width: 860px) { .dash-row { flex-direction: column; } }
+
+  /* Neumorphic card variant */
+  .neu-card {
+    background: var(--color-neu-base);
+    border-radius: 16px;
+    box-shadow: -6px -6px 12px var(--color-neu-highlight), 6px 6px 12px var(--color-neu-shadow);
+    padding: 1.25rem;
+  }
+
+  /* ── Tier Breakdown ── */
+  .tier-grid { display: flex; flex-direction: column; gap: 0.65rem; }
+  .tier-stat-card {
+    display: flex; align-items: center; gap: 0.6rem;
+  }
+  .tier-stat-badge {
+    display: inline-block;
+    font-size: 10px; font-weight: 700; padding: 0.2rem 0.45rem;
+    border-radius: var(--radius-sm); letter-spacing: 0.03em;
+    min-width: 82px; text-align: center;
+  }
+  .tier-stat-count {
+    font-size: 16px; font-weight: 700; color: var(--color-on-surface);
+    min-width: 36px; text-align: right;
+  }
+  .tier-stat-bar {
+    flex: 1; height: 6px; background: var(--color-neu-base);
+    box-shadow: inset 2px 2px 4px var(--color-neu-shadow), inset -2px -2px 4px var(--color-neu-highlight);
+    border-radius: 9999px; overflow: hidden;
+  }
+  .tier-stat-fill { height: 100%; border-radius: 9999px; transition: width 0.6s ease; }
+  .tier-stat-pct { font-size: 11px; color: var(--color-on-surface-variant); min-width: 32px; text-align: right; }
+
+  /* ── Batch Distribution ── */
+  .batch-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .batch-row { display: flex; align-items: center; gap: 0.6rem; }
+  .batch-label {
+    font-size: 12px; font-weight: 600; color: var(--color-on-surface);
+    min-width: 56px;
+  }
+  .batch-bar-track {
+    flex: 1; height: 8px; background: var(--color-neu-base);
+    box-shadow: inset 2px 2px 4px var(--color-neu-shadow), inset -2px -2px 4px var(--color-neu-highlight);
+    border-radius: 9999px; overflow: hidden;
+  }
+  .batch-bar-fill {
+    height: 100%; border-radius: 9999px;
+    background: linear-gradient(90deg, var(--color-primary), #7c3aed);
+    transition: width 0.6s ease;
+  }
+  .batch-count { font-size: 13px; font-weight: 600; color: var(--color-on-surface); min-width: 28px; text-align: right; }
+
+  /* ── Campus Overview ── */
+  .campus-grid { display: flex; flex-direction: column; gap: 0.5rem; }
+  .campus-card {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.7rem 0.85rem;
+    border-radius: 12px;
+    background: var(--color-neu-base);
+    box-shadow: 3px 3px 6px var(--color-neu-shadow), -3px -3px 6px var(--color-neu-highlight);
+    text-decoration: none !important; transition: all 0.15s;
+  }
+  .campus-card:hover { transform: translateY(-1px); box-shadow: 5px 5px 10px var(--color-neu-shadow), -5px -5px 10px var(--color-neu-highlight); }
+  .campus-card-icon {
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    border-radius: 10px; background: #ede9fe; color: #6d28d9;
+  }
+  .campus-card-icon span { font-size: 20px; }
+  .campus-card-name { display: block; font-size: 13px; font-weight: 600; color: var(--color-on-surface); }
+  .campus-card-count { display: block; font-size: 11px; color: var(--color-on-surface-variant); }
+
+  /* ── Recent Registrations Table ── */
+  .recent-table-wrap { overflow-x: auto; }
+  .dash-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+  }
+  .dash-table th {
+    text-align: left; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--color-on-surface-variant); padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+  .dash-table td { padding: 0.45rem 0.5rem; color: var(--color-on-surface); border-bottom: 1px solid rgba(0,0,0,0.04); }
+  .dash-table tbody tr:hover { background: rgba(255,255,255,0.04); }
+  .dash-view-all {
+    display: inline-block; margin-top: 0.75rem;
+    font-size: 12px; font-weight: 600; color: var(--color-primary);
+    text-decoration: none !important;
+  }
+  .dash-view-all:hover { text-decoration: underline !important; }
+
+  .empty-hint { font-size: 13px; color: var(--color-on-surface-variant); }
+
+  /* ── Quick Actions ── */
+  .quick-links { }
   .links-grid { display: flex; flex-direction: column; gap: 0.5rem; }
   .action-card {
     display: flex; align-items: center; gap: 0.75rem;
@@ -92,5 +404,13 @@ const [{ count: pendingCount }, { count: studentCount }, { count: campusCount }]
     flex: 1; font-family: var(--font-label); font-weight: 600;
     font-size: 0.9rem; color: var(--color-on-surface);
   }
-  .action-card .arrow { color: var(--color-outline); font-size:1.25rem; }
+  .action-card .arrow { color: var(--color-outline); font-size: 1.25rem; }
+
+  /* tier-badge reuse from AdminLayout */
+  .tier-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: var(--radius-sm); letter-spacing: 0.03em; }
+  .tier-badge.JUNIOR { background: #dbeafe; color: #1d4ed8; }
+  .tier-badge.FOUNDATION { background: #d1fae5; color: #047857; }
+  .tier-badge.UG { background: #fef3c7; color: #b45309; }
+  .tier-badge.PG { background: #e0e7ff; color: #4338ca; }
+  .tier-badge.PHD { background: #fce7f3; color: #be185d; }
 </style>

@@ -63,7 +63,10 @@ if (!admin) return Astro.redirect("/login");
           <input type="text" id="event-icon" placeholder="Icon name (e.g. science)" />
         </div>
         <div class="neu-input-wrap">
-          <input type="text" id="event-location" placeholder="Location or link" />
+          <input type="text" id="event-location" placeholder="Location URL (Google Maps, Zoom, etc.)" />
+        </div>
+        <div class="neu-input-wrap">
+          <input type="text" id="event-location-label" placeholder="Location label (e.g. Main Auditorium, Online)" />
         </div>
         <div class="neu-input-wrap">
           <input type="url" id="event-reg-url" placeholder="Registration URL" />
@@ -76,11 +79,22 @@ if (!admin) return Astro.redirect("/login");
               <span class="st-toggle-slider"></span>
             </label>
           </div>
-          <button type="submit" class="btn-neu" style="margin-left:auto"><span class="material-symbols-outlined" style="font-size:16px">add</span> Create Event</button>
+          <div style="display:flex;align-items:center;gap:0.5rem">
+            <span style="font-size:13px;font-weight:600;color:var(--color-on-surface-variant);letter-spacing:0.02em">PIN TO FEED</span>
+            <label class="st-toggle">
+              <input type="checkbox" id="event-pin" />
+              <span class="st-toggle-slider"></span>
+            </label>
+          </div>
+          <div style="display:flex;gap:0.5rem;margin-left:auto">
+            <button type="button" class="btn-neu" id="cancel-edit" style="display:none"><span class="material-symbols-outlined" style="font-size:16px">close</span> Cancel</button>
+            <button type="submit" class="btn-neu" id="event-submit-btn"><span class="material-symbols-outlined" style="font-size:16px">add</span> Create Event</button>
+          </div>
         </div>
       </form>
       <p id="event-error" class="error-msg"></p>
     </div>
+    <div id="event-feedback" class="feedback-msg"></div>
     <div id="events-container"><p class="loading">Loading events...</p></div>
   </div>
 
@@ -124,6 +138,9 @@ if (!admin) return Astro.redirect("/login");
   .st-toggle-slider::before { content:""; position:absolute; width:20px; height:20px; left:2px; bottom:2px; background:var(--color-surface); border-radius:50%; box-shadow:var(--shadow-extruded-sm); transition:transform 0.2s; }
   .st-toggle input:checked + .st-toggle-slider { background:var(--color-error); }
   .st-toggle input:checked + .st-toggle-slider::before { transform:translateX(20px); }
+  .feedback-msg { padding:0.65rem 1rem; border-radius:var(--radius-default); font-size:13px; font-weight:600; margin-bottom:0.75rem; transition:all 0.3s; }
+  .feedback-msg.success { box-shadow:var(--shadow-extruded-sm); color:var(--color-primary); background:rgba(0,106,103,0.06); }
+  .feedback-msg:empty { padding:0; margin:0; }
 </style>
 
 <script>
@@ -144,6 +161,7 @@ if (!admin) return Astro.redirect("/login");
     return err instanceof Error ? err.message : typeof err === "string" ? err : "Request failed. Check console for details.";
   }
   const supabase = getSupabase();
+  let editingEventId = null;
 
   document.querySelectorAll(".gov-tab").forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -172,7 +190,7 @@ if (!admin) return Astro.redirect("/login");
       container.innerHTML = `
         <div class="data-table-wrap">
           <table class="data-table">
-            <thead><tr><th>Title</th><th>Date</th><th>Type</th><th>Live</th><th>Action</th></tr></thead>
+            <thead><tr><th>Title</th><th>Date</th><th>Type</th><th>Pin</th><th>Live</th><th>Action</th></tr></thead>
             <tbody>
               ${data
                 .map(
@@ -181,9 +199,11 @@ if (!admin) return Astro.redirect("/login");
                   <td><strong>${escapeHtml(e.title)}</strong></td>
                   <td style="font-size:13px;color:var(--color-on-surface-variant)">${new Date(e.event_date).toLocaleDateString()} ${new Date(e.event_date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</td>
                   <td><span class="campus-tag">${escapeHtml(e.event_type || "—")}</span></td>
+                  <td>${e.is_pinned ? '<span class="material-symbols-outlined" style="font-size:18px;color:var(--color-primary)">keep</span>' : ""}</td>
                   <td><span class="status-badge"><span class="status-dot ${e.is_live ? "approved" : "pending"}"></span><span class="status-label ${e.is_live ? "approved" : "pending"}">${e.is_live ? "Live" : "Offline"}</span></span></td>
                   <td>
                     <div style="display:flex;gap:0.35rem">
+                      <button class="btn-neu btn-neu-sm" data-action="edit-event" data-id="${e.id}">Edit</button>
                       <button class="btn-neu btn-neu-sm" data-action="toggle-live" data-id="${e.id}" data-live="${e.is_live}">${e.is_live ? "Take Offline" : "Go Live"}</button>
                       <button class="btn-neu btn-neu-sm danger" data-action="delete-event" data-id="${e.id}" data-title="${escapeHtml(e.title)}">Delete</button>
                     </div>
@@ -202,6 +222,13 @@ if (!admin) return Astro.redirect("/login");
           const id = btn.getAttribute("data-id");
           btn.disabled = true;
           try {
+            if (action === "edit-event" || action === "edit-timeline") {
+              btn.disabled = false;
+              document.querySelector('[data-tab="scheduler"]')?.classList.add("active");
+              document.getElementById("panel-scheduler")?.classList.add("active");
+              await loadEventIntoForm(id);
+              return;
+            }
             if (action === "toggle-live") {
               const live = btn.getAttribute("data-live") === "true";
               await supabase.from("events").update({ is_live: !live }).eq("id", id);
@@ -210,9 +237,7 @@ if (!admin) return Astro.redirect("/login");
               if (!confirm(`Delete event "${title}"?`)) { btn.disabled = false; return; }
               await supabase.from("events").delete().eq("id", id);
             }
-            loadEvents();
-            loadLiveEvents();
-            loadTimeline();
+            refreshAll();
           } catch (err) {
             console.error("EventsDisp scheduler action:", err);
             btn.disabled = false;
@@ -226,6 +251,67 @@ if (!admin) return Astro.redirect("/login");
     }
   }
 
+  function refreshAll() {
+    loadEvents();
+    loadLiveEvents();
+    loadTimeline();
+  }
+
+  async function loadEventIntoForm(id) {
+    try {
+      const { data: ev, error } = await supabase.from("events").select("*").eq("id", id).single();
+      if (error) throw error;
+      if (!ev) { alert("Event not found."); return; }
+      fillEditForm(ev);
+    } catch (err) {
+      console.error("loadEventIntoForm:", err);
+      alert("Failed to load event: " + errMsg(err));
+    }
+  }
+
+  function showFeedback(msg, type) {
+    const el = document.getElementById("event-feedback");
+    if (!el) return;
+    el.textContent = msg;
+    el.className = "feedback-msg " + (type || "success");
+    setTimeout(() => { el.className = "feedback-msg"; }, 3000);
+  }
+
+  function fillEditForm(ev) {
+    editingEventId = ev.id;
+    document.getElementById("event-title").value = ev.title || "";
+    document.getElementById("event-desc").value = ev.description || "";
+    if (ev.event_date) {
+      const d = new Date(ev.event_date);
+      const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      document.getElementById("event-date").value = local;
+    }
+    document.getElementById("event-type").value = ev.event_type || "webinar";
+    document.getElementById("event-category").value = ev.category || "";
+    document.getElementById("event-icon").value = ev.icon || "event";
+    document.getElementById("event-location").value = ev.location || "";
+    document.getElementById("event-location-label").value = ev.location_label || "";
+    document.getElementById("event-reg-url").value = ev.registration_url || "";
+    document.getElementById("event-live").checked = ev.is_live || false;
+    document.getElementById("event-pin").checked = ev.is_pinned || false;
+    document.getElementById("cancel-edit").style.display = "";
+    const submitBtn = document.getElementById("event-submit-btn");
+    submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">save</span> Update Event';
+    document.getElementById("event-title").focus();
+    document.getElementById("event-error").textContent = "";
+  }
+
+  function resetEditForm() {
+    editingEventId = null;
+    document.getElementById("add-event-form").reset();
+    document.getElementById("cancel-edit").style.display = "none";
+    const submitBtn = document.getElementById("event-submit-btn");
+    submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">add</span> Create Event';
+    document.getElementById("event-error").textContent = "";
+  }
+
+  document.getElementById("cancel-edit")?.addEventListener("click", resetEditForm);
+
   document.getElementById("add-event-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const titleInput = document.getElementById("event-title");
@@ -235,8 +321,10 @@ if (!admin) return Astro.redirect("/login");
     const catInput = document.getElementById("event-category");
     const iconInput = document.getElementById("event-icon");
     const locInput = document.getElementById("event-location");
+    const locLabelInput = document.getElementById("event-location-label");
     const regUrlInput = document.getElementById("event-reg-url");
     const liveCheck = document.getElementById("event-live");
+    const pinCheck = document.getElementById("event-pin");
     const errorEl = document.getElementById("event-error");
     if (!titleInput || !dateInput || !errorEl) return;
     errorEl.textContent = "";
@@ -246,32 +334,32 @@ if (!admin) return Astro.redirect("/login");
     }
     titleInput.disabled = true;
     dateInput.disabled = true;
+    const payload = {
+      title: titleInput.value.trim(),
+      description: descInput?.value?.trim() || "",
+      event_date: new Date(dateInput.value).toISOString(),
+      event_type: typeInput?.value || "webinar",
+      category: catInput?.value?.trim() || "",
+      icon: iconInput?.value?.trim() || "event",
+      location: locInput?.value?.trim() || "",
+      location_label: locLabelInput?.value?.trim() || "",
+      registration_url: regUrlInput?.value?.trim() || "",
+      is_live: liveCheck?.checked || false,
+      is_pinned: pinCheck?.checked || false,
+    };
     try {
-      const { error } = await supabase.from("events").insert({
-        title: titleInput.value.trim(),
-        description: descInput?.value?.trim() || "",
-        event_date: new Date(dateInput.value).toISOString(),
-        event_type: typeInput?.value || "webinar",
-        category: catInput?.value?.trim() || "",
-        icon: iconInput?.value?.trim() || "event",
-        location: locInput?.value?.trim() || "",
-        registration_url: regUrlInput?.value?.trim() || "",
-        is_live: liveCheck?.checked || false,
-      });
+      let error;
+      if (editingEventId) {
+        ({ error } = await supabase.from("events").update(payload).eq("id", editingEventId));
+      } else {
+        ({ error } = await supabase.from("events").insert(payload));
+      }
       if (error) throw error;
-      titleInput.value = "";
-      if (descInput) descInput.value = "";
-      if (dateInput) dateInput.value = "";
-      if (catInput) catInput.value = "";
-      if (iconInput) iconInput.value = "";
-      if (locInput) locInput.value = "";
-      if (regUrlInput) regUrlInput.value = "";
-      if (liveCheck) liveCheck.checked = false;
-      loadEvents();
-      loadLiveEvents();
-      loadTimeline();
+      showFeedback(editingEventId ? "Event updated successfully." : "Event created successfully.", "success");
+      resetEditForm();
+      refreshAll();
     } catch (err) {
-      console.error("EventsDisp createEvent:", err);
+      console.error("EventsDisp submit:", err);
       errorEl.textContent = errMsg(err);
     } finally {
       titleInput.disabled = false;
@@ -300,25 +388,38 @@ if (!admin) return Astro.redirect("/login");
           (e) => `
         <div class="live-banner-card${e.is_live ? " live" : ""}">
           <span class="material-symbols-outlined" style="font-size:24px;color:${e.is_live ? "var(--color-error)" : "var(--color-on-surface-variant)"}">${e.is_live ? "podcasts" : "radio_button_unchecked"}</span>
+          ${e.is_pinned ? '<span class="material-symbols-outlined" style="font-size:18px;color:var(--color-primary)">keep</span>' : ""}
           <div class="lb-info">
             <div class="lb-title">${escapeHtml(e.title)} <span class="campus-tag">${escapeHtml(e.event_type || "—")}</span></div>
             <div class="lb-meta">${new Date(e.event_date).toLocaleDateString()} ${e.location ? "· " + escapeHtml(e.location) : ""}</div>
           </div>
-          <button class="btn-neu btn-neu-sm ${e.is_live ? "danger" : ""}" data-action="toggle-live-banner" data-id="${e.id}" data-live="${e.is_live}">${e.is_live ? "Take Offline" : "Go Live"}</button>
+          <div style="display:flex;gap:0.35rem">
+            <button class="btn-neu btn-neu-sm" data-action="edit-live" data-id="${e.id}">Edit</button>
+            <button class="btn-neu btn-neu-sm ${e.is_live ? "danger" : ""}" data-action="toggle-live-banner" data-id="${e.id}" data-live="${e.is_live}">${e.is_live ? "Take Offline" : "Go Live"}</button>
+          </div>
         </div>
       `
         )
         .join("");
-      container.querySelectorAll("[data-action='toggle-live-banner']").forEach((btn) => {
+      container.querySelectorAll("[data-action]").forEach((btn) => {
         btn.addEventListener("click", async () => {
+          const action = btn.getAttribute("data-action");
           const id = btn.getAttribute("data-id");
-          const live = btn.getAttribute("data-live") === "true";
+          if (action === "edit-live") {
+            btn.disabled = false;
+            // Switch to scheduler tab and trigger edit
+            document.querySelectorAll(".gov-tab").forEach((t) => t.classList.remove("active"));
+            document.querySelectorAll(".gov-panel").forEach((p) => p.classList.remove("active"));
+            document.querySelector('[data-tab="scheduler"]')?.classList.add("active");
+            document.getElementById("panel-scheduler")?.classList.add("active");
+            await loadEventIntoForm(id);
+            return;
+          }
           btn.disabled = true;
           try {
+            const live = btn.getAttribute("data-live") === "true";
             await supabase.from("events").update({ is_live: !live }).eq("id", id);
-            loadLiveEvents();
-            loadEvents();
-            loadTimeline();
+            refreshAll();
           } catch (err) {
             console.error("EventsDisp liveToggle:", err);
             btn.disabled = false;
@@ -354,13 +455,26 @@ if (!admin) return Astro.redirect("/login");
           (e, i) => `
         <div class="timeline-item" style="${i === 0 ? "border-left:3px solid var(--color-primary)" : ""}">
           <div class="timeline-date">${new Date(e.event_date).toLocaleDateString([], { month: "short", day: "numeric" })}</div>
-          <div class="timeline-title">${escapeHtml(e.title)}</div>
+          <div class="timeline-title">${escapeHtml(e.title)} ${e.is_pinned ? '<span class="material-symbols-outlined" style="font-size:16px;color:var(--color-primary);vertical-align:middle">keep</span>' : ""}</div>
           <div class="timeline-type">${escapeHtml(e.event_type || "")}</div>
           ${e.is_live ? '<span class="status-badge"><span class="status-dot approved"></span><span class="status-label approved">LIVE</span></span>' : ""}
+          <button class="btn-neu btn-neu-sm" data-action="edit-timeline" data-id="${e.id}">Edit</button>
         </div>
       `
         )
         .join("");
+      container.querySelectorAll("[data-action='edit-timeline']").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          btn.disabled = false;
+          document.querySelector('[data-tab="scheduler"]')?.classList.add("active");
+          document.querySelector(".gov-tab.active")?.classList.remove("active");
+          document.querySelector('[data-tab="scheduler"]')?.classList.add("active");
+          document.querySelectorAll(".gov-panel").forEach((p) => p.classList.remove("active"));
+          document.getElementById("panel-scheduler")?.classList.add("active");
+          await loadEventIntoForm(id);
+        });
+      });
     } catch (err) {
       console.error("EventsDisp loadTimeline:", err);
       container.innerHTML = `<div class="error-state">Failed: ${errMsg(err)}</div>`;

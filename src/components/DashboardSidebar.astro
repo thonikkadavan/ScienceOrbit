@@ -24,27 +24,27 @@ const avatarUrl = user?.user_metadata?.avatar_url
   </div>
 
   <nav class="ds-nav">
-    <a href="/dashboard/feed" class="ds-nav-item {current === 'feed' ? 'active' : ''}">
+    <button class="ds-nav-item {current === 'feed' ? 'active' : ''}" data-tab="feed">
       <span class="material-symbols-outlined ds-nav-icon">dynamic_feed</span>
       <span class="ds-nav-label">Feed</span>
-    </a>
-    <a href="/dashboard" class="ds-nav-item {current === 'portfolio' ? 'active' : ''}">
+    </button>
+    <button class="ds-nav-item {current === 'portfolio' ? 'active' : ''}" data-tab="portfolio">
       <span class="material-symbols-outlined ds-nav-icon">account_circle</span>
       <span class="ds-nav-label">Portfolio</span>
-    </a>
-    <a href="/dashboard/events" class="ds-nav-item {current === 'events' ? 'active' : ''}">
+    </button>
+    <button class="ds-nav-item {current === 'events' ? 'active' : ''}" data-tab="events">
       <span class="material-symbols-outlined ds-nav-icon">calendar_today</span>
       <span class="ds-nav-label">Events</span>
-    </a>
+    </button>
   </nav>
 
   <div class="ds-spacer"></div>
 
   <nav class="ds-nav">
-    <a href="/dashboard/settings" class="ds-nav-item {current === 'settings' ? 'active' : ''}">
+    <button class="ds-nav-item {current === 'settings' ? 'active' : ''}" data-tab="settings">
       <span class="material-symbols-outlined ds-nav-icon">settings</span>
       <span class="ds-nav-label">Settings</span>
-    </a>
+    </button>
     <a href="#" class="ds-nav-item">
       <span class="material-symbols-outlined ds-nav-icon">help_outline</span>
       <span class="ds-nav-label">Help</span>
@@ -155,6 +155,9 @@ const avatarUrl = user?.user_metadata?.avatar_url
     font-weight: 500;
     transition: all 0.2s;
     position: relative;
+    background: none;
+    border: none;
+    cursor: pointer;
   }
 
   .ds-nav-item:hover {

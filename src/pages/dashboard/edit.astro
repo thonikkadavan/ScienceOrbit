@@ -3,7 +3,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import DashboardSidebar from "../../components/DashboardSidebar.astro";
 import { createClient } from "../../lib/supabase";
 import { getProfile } from "../../lib/auth";
-import type { Campus, Subject, Mentor } from "../../types/database";
+import type { Campus, Mentor } from "../../types/database";
 
 const supabase = createClient({ request: Astro.request, cookies: Astro.cookies });
 const profile = await getProfile(supabase);
@@ -15,10 +15,6 @@ if (!profile) {
 const campuses = (
   await supabase.from("campuses").select("*").order("name")
 ).data as Campus[] | null;
-
-const subjects = (
-  await supabase.from("subjects").select("*").order("name")
-).data as Subject[] | null;
 
 const mentors = (
   await supabase.from("mentors").select("*").order("name")
@@ -35,13 +31,10 @@ const previewAvatarTag = avatarUrl
   : `<span class="material-symbols-outlined preview-avatar-icon">person</span>`;
 
 const campusName = campuses?.find((c) => c.id === profile.campus_id)?.name ?? "";
-const profileSubjects = profile.subjects ?? [];
-const techStack: string[] = profile.tech_stack || [];
-let milestones: { title: string; issuer: string; url: string }[] = [];
+let milestones: { title: string; issuer: string }[] = [];
 try {
   milestones = typeof profile.milestones === "string" ? JSON.parse(profile.milestones) : (profile.milestones || []);
 } catch { milestones = []; }
-const commonTechTags = ["JavaScript","TypeScript","Python","React","Vue","Angular","Svelte","Astro","Node.js","Next.js","Tailwind CSS","Supabase","PostgreSQL","Git","Docker","TensorFlow","PyTorch","Rust","Go","C++","Java","R","MATLAB","Julia","GraphQL","REST","Prisma","Drizzle","Laravel","Django","Flask","FastAPI"];
 
 const socialPlatforms = ["GitHub","LinkedIn","X / Twitter","Instagram","Discord","YouTube","TikTok","Snapchat","Facebook","Reddit","Threads","Bluesky","Mastodon","WhatsApp","Telegram","Signal","Slack","Medium","Dev.to","Hashnode","Stack Overflow","ResearchGate","Google Scholar","ORCID","Academia.edu"];
 
@@ -92,13 +85,6 @@ try {
                   </span>
                 </div>
                 <div class="preview-detail-box">
-                  <span class="preview-detail-label">Academic Subjects</span>
-                  <span class="preview-detail-value">
-                    <span class="material-symbols-outlined preview-detail-icon">menu_book</span>
-                    <span id="preview-subjects">{profileSubjects.length ? profileSubjects.join(", ") : "None selected"}</span>
-                  </span>
-                </div>
-                <div class="preview-detail-box">
                   <span class="preview-detail-label">Achievements</span>
                   <span class="preview-detail-value" style="align-items: flex-start;">
                     <span class="material-symbols-outlined preview-detail-icon" style="margin-top:2px">emoji_events</span>
@@ -114,18 +100,6 @@ try {
                     </span>
                   </div>
                 )}
-                <div class="preview-detail-box">
-                  <span class="preview-detail-label">Current Project</span>
-                  <span class="preview-detail-value" style="flex-direction:column;align-items:flex-start;gap:0.25rem;">
-                    <span class="preview-detail-value">
-                      <span class="material-symbols-outlined preview-detail-icon">science</span>
-                      <span id="preview-project-title">{profile.project_title || "No project set"}</span>
-                    </span>
-                    {profile.project_progress > 0 && (
-                      <span class="preview-project-progress">Progress: {profile.project_progress}%</span>
-                    )}
-                  </span>
-                </div>
               </div>
             </div>
           </section>
@@ -220,31 +194,6 @@ try {
                 </div>
 
                 <div class="form-group">
-                  <label>Research Subjects</label>
-                  <div class="subject-panel">
-                    <div class="subject-pills" id="subject-pills">
-                      {profileSubjects.map((s) => (
-                        <div class="subject-pill" data-subject={s}>
-                          <span>{s}</span>
-                          <span class="subject-pill-remove material-symbols-outlined" data-subject={s}>close</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div class="subject-add-row">
-                      <select id="subject-select" class="neu-input subject-select">
-                        <option value="">Add a subject...</option>
-                        {subjects?.filter((s) => !profileSubjects.includes(s.name)).map((s) => (
-                          <option value={s.name}>{s.name}</option>
-                        ))}
-                      </select>
-                      <button type="button" id="add-subject-btn" class="btn-icon">
-                        <span class="material-symbols-outlined">add</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="form-group">
                   <label>Professional Employment</label>
                   <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
                     <div class="neu-input-wrap" style="flex:1;min-width:140px">
@@ -306,37 +255,6 @@ try {
 
                 <div class="form-section-divider">
                   <span class="form-section-line"></span>
-                  <span class="form-section-label">Technical Capabilities</span>
-                  <span class="form-section-line"></span>
-                </div>
-
-                <div class="form-group">
-                  <label>Developer Stack</label>
-                  <div class="subject-panel">
-                    <div class="subject-pills" id="tech-pills">
-                      {techStack.map((s) => (
-                        <div class="subject-pill" data-tech={s}>
-                          <span>{s}</span>
-                          <span class="subject-pill-remove material-symbols-outlined" data-tech={s}>close</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div class="subject-add-row">
-                      <select id="tech-select" class="neu-input subject-select">
-                        <option value="">Add a technology...</option>
-                        {commonTechTags.filter((t) => !techStack.includes(t)).map((t) => (
-                          <option value={t}>{t}</option>
-                        ))}
-                      </select>
-                      <button type="button" id="add-tech-btn" class="btn-icon">
-                        <span class="material-symbols-outlined">add</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="form-section-divider">
-                  <span class="form-section-line"></span>
                   <span class="form-section-label">Verifiable Milestones</span>
                   <span class="form-section-line"></span>
                 </div>
@@ -346,8 +264,7 @@ try {
                     {(milestones || []).map((m, i) => (
                       <div class="milestone-row" data-index={i}>
                         <input type="text" class="neu-input milestone-title" placeholder="Milestone title" value={m.title} />
-                        <input type="text" class="neu-input milestone-issuer" placeholder="Issuing body" value={m.issuer} />
-                        <input type="url" class="neu-input milestone-url" placeholder="Verification URL" value={m.url} />
+                        <input type="text" class="neu-input milestone-issuer" placeholder="Campus Name" value={m.issuer} />
                         <button type="button" class="milestone-remove-btn" title="Remove">
                           <span class="material-symbols-outlined">close</span>
                         </button>
@@ -377,46 +294,6 @@ try {
                       </label>
                       <p class="avatar-hint">JPG or PNG only. Max 2MB.</p>
                       <p id="avatar-error" class="error-msg"></p>
-                    </div>
-                  </div>
-                </div>
-
-                <input type="hidden" id="subjects-input" name="subjects" value={JSON.stringify(profileSubjects)} />
-
-                <div class="form-section-divider">
-                  <span class="form-section-line"></span>
-                  <span class="form-section-label">Current Project</span>
-                  <span class="form-section-line"></span>
-                </div>
-
-                <div class="form-group">
-                  <label for="repo_url">Repository URL</label>
-                  <input type="url" id="repo_url" class="neu-input" placeholder="https://github.com/username/repo" value={profile.repo_url || ""} />
-                </div>
-
-                <div class="form-group">
-                  <label for="deploy_url">Deployment URL (Live Site)</label>
-                  <input type="url" id="deploy_url" class="neu-input" placeholder="https://your-project.vercel.app" value={profile.deploy_url || ""} />
-                </div>
-
-                <div class="form-group">
-                  <label for="project_title">Project Title</label>
-                  <input type="text" id="project_title" class="neu-input" placeholder="e.g. Exoplanet Transit Modeling" value={profile.project_title || ""} />
-                </div>
-
-                <div class="form-group">
-                  <label for="project_description">Project Description</label>
-                  <textarea id="project_description" class="neu-input neu-textarea" rows="3" placeholder="Describe your current research project...">{profile.project_description || ""}</textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="project_progress">Completion Progress: <span id="progress-val">{profile.project_progress || 0}</span>%</label>
-                  <div class="progress-slider-wrap">
-                    <input type="range" id="project_progress" class="progress-slider" min="0" max="100" value={profile.project_progress || 0} />
-                    <div class="progress-slider-labels">
-                      <span>0%</span>
-                      <span>50%</span>
-                      <span>100%</span>
                     </div>
                   </div>
                 </div>
@@ -486,117 +363,6 @@ try {
   const avatarPreview = document.getElementById("avatar-preview");
   const avatarPlaceholder = document.getElementById("avatar-placeholder");
   const avatarError = document.getElementById("avatar-error");
-  const subjectSelect = document.getElementById("subject-select");
-  const addSubjectBtn = document.getElementById("add-subject-btn");
-  const subjectPills = document.getElementById("subject-pills");
-  const subjectsInput = document.getElementById("subjects-input");
-
-  let selectedSubjects = JSON.parse(subjectsInput?.value || "[]");
-  let selectedTech = [];
-
-  // Initialize tech stack
-  const techPills = document.getElementById("tech-pills");
-  const techSelect = document.getElementById("tech-select");
-  const addTechBtn = document.getElementById("add-tech-btn");
-  const techInput = document.getElementById("tech-stack-input");
-
-  // Populate tech select options
-  if (techSelect) {
-    const commonTags = JSON.parse(techSelect.dataset.allTags || "[]");
-    // Set selected tech from existing pills
-    techPills?.querySelectorAll(".subject-pill").forEach((pill) => {
-      const t = pill.dataset.tech;
-      if (t && !selectedTech.includes(t)) selectedTech.push(t);
-    });
-
-    // Initialize with current selection
-    updateTechOptions();
-  }
-
-  function updateTechOptions() {
-    if (!techSelect) return;
-    const val = techSelect.value;
-    techSelect.innerHTML = '<option value="">Add a technology...</option>';
-    const allTags = JSON.parse(techSelect.dataset.allTags || "[]");
-    allTags
-      .filter((t) => !selectedTech.includes(t))
-      .forEach((t) => {
-        const opt = document.createElement("option");
-        opt.value = t;
-        opt.textContent = t;
-        techSelect.appendChild(opt);
-      });
-    techSelect.value = val && !selectedTech.includes(val) ? "" : val;
-  }
-
-  function renderTechPills() {
-    if (!techPills) return;
-    techPills.innerHTML = selectedTech
-      .map((t) => `<div class="subject-pill" data-tech="${t}"><span>${t}</span><span class="subject-pill-remove material-symbols-outlined" data-tech="${t}">close</span></div>`)
-      .join("");
-    techPills.querySelectorAll(".subject-pill-remove").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        selectedTech = selectedTech.filter((t) => t !== btn.dataset.tech);
-        renderTechPills();
-        updateTechOptions();
-      });
-    });
-  }
-
-  addTechBtn?.addEventListener("click", () => {
-    const val = techSelect?.value;
-    if (!val || selectedTech.includes(val)) return;
-    selectedTech.push(val);
-    renderTechPills();
-    updateTechOptions();
-    techSelect.value = "";
-  });
-
-  function updateSubjectsInput() {
-    subjectsInput.value = JSON.stringify(selectedSubjects);
-  }
-
-  function renderPills() {
-    if (!subjectPills) return;
-    subjectPills.innerHTML = selectedSubjects
-      .map((s) => `<div class="subject-pill" data-subject="${s}"><span>${s}</span><span class="subject-pill-remove material-symbols-outlined" data-subject="${s}">close</span></div>`)
-      .join("");
-    subjectPills.querySelectorAll(".subject-pill-remove").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        selectedSubjects = selectedSubjects.filter((s) => s !== btn.dataset.subject);
-        updateSubjectsInput();
-        renderPills();
-        updateSubjectOptions();
-      });
-    });
-  }
-
-  function updateSubjectOptions() {
-    if (!subjectSelect) return;
-    const currentVal = subjectSelect.value;
-    subjectSelect.innerHTML = '<option value="">Add a subject...</option>';
-    const allSubjects = JSON.parse(subjectSelect.dataset.allSubjects || "[]");
-    allSubjects
-      .filter((s) => !selectedSubjects.includes(s))
-      .forEach((s) => {
-        const opt = document.createElement("option");
-        opt.value = s;
-        opt.textContent = s;
-        subjectSelect.appendChild(opt);
-      });
-    subjectSelect.value = currentVal && !selectedSubjects.includes(currentVal) ? "" : currentVal;
-  }
-
-  addSubjectBtn?.addEventListener("click", () => {
-    const val = subjectSelect?.value;
-    if (!val || selectedSubjects.includes(val)) return;
-    selectedSubjects.push(val);
-    updateSubjectsInput();
-    renderPills();
-    updateSubjectOptions();
-    subjectSelect.value = "";
-  });
-
   document.getElementById("mob-avatar-trigger")?.addEventListener("click", () => {
     avatarInput?.click();
   });
@@ -682,7 +448,6 @@ try {
       const milestones = Array.from(milestoneRows).map((row) => ({
         title: row.querySelector(".milestone-title")?.value?.trim() || "",
         issuer: row.querySelector(".milestone-issuer")?.value?.trim() || "",
-        url: row.querySelector(".milestone-url")?.value?.trim() || "",
       })).filter((m) => m.title);
 
             // Collect social links
@@ -702,11 +467,6 @@ try {
       const organisation = document.getElementById("organisation").value.trim();
       const achievements = document.getElementById("achievements")?.value?.trim() || "";
       const biography = document.getElementById("biography")?.value?.trim() || "";
-      const repoUrl = document.getElementById("repo_url").value.trim();
-      const deployUrl = document.getElementById("deploy_url").value.trim();
-      const projectTitle = document.getElementById("project_title").value.trim();
-      const projectDescription = document.getElementById("project_description").value.trim();
-      const projectProgress = parseInt(document.getElementById("project_progress").value, 10) || 0;
 
       const { error: updateError } = await supabase
         .from("profiles")
@@ -719,17 +479,10 @@ try {
           course_name: courseName,
           job_title: jobTitle,
           organisation: organisation,
-          subjects: selectedSubjects,
           achievements,
           biography,
-          tech_stack: selectedTech,
           milestones,
           social_links: socialLinks,
-          repo_url: repoUrl,
-          deploy_url: deployUrl,
-          project_title: projectTitle,
-          project_description: projectDescription,
-          project_progress: projectProgress,
         })
         .eq("id", user.id);
 
@@ -764,14 +517,6 @@ try {
   });
 
   (function init() {
-    const select = document.getElementById("subject-select");
-    if (select) {
-      const options = select.querySelectorAll("option");
-      const all = Array.from(options).map((o) => o.value).filter(Boolean);
-      select.dataset.allSubjects = JSON.stringify(all);
-    }
-    renderPills();
-
     // Milestones add/remove
     const milestonesContainer = document.getElementById("milestones-container");
     document.getElementById("add-milestone-btn")?.addEventListener("click", () => {
@@ -779,8 +524,7 @@ try {
       row.className = "milestone-row";
       row.innerHTML = `
         <input type="text" class="neu-input milestone-title" placeholder="Milestone title" />
-        <input type="text" class="neu-input milestone-issuer" placeholder="Issuing body" />
-        <input type="url" class="neu-input milestone-url" placeholder="Verification URL" />
+        <input type="text" class="neu-input milestone-issuer" placeholder="Campus Name" />
         <button type="button" class="milestone-remove-btn" title="Remove"><span class="material-symbols-outlined">close</span></button>
       `;
       row.querySelector(".milestone-remove-btn").addEventListener("click", () => row.remove());
@@ -809,19 +553,6 @@ try {
     });
     socialContainer?.querySelectorAll(".social-remove-btn").forEach((btn) => {
       btn.addEventListener("click", () => btn.closest(".social-link-row")?.remove());
-    });
-
-    // Tech stack tag options
-    if (techSelect) {
-      const tags = Array.from(techSelect.querySelectorAll("option")).map((o) => o.value).filter(Boolean);
-      techSelect.dataset.allTags = JSON.stringify(tags);
-    }
-
-    // Progress slider live value
-    const progressSlider = document.getElementById("project_progress");
-    const progressVal = document.getElementById("progress-val");
-    progressSlider?.addEventListener("input", () => {
-      if (progressVal) progressVal.textContent = progressSlider.value;
     });
 
     // Academic tier → toggle course name
@@ -1632,68 +1363,10 @@ try {
     white-space: nowrap;
   }
 
-  /* Progress slider */
-  .progress-slider-wrap {
-    padding: 0.5rem 0;
-  }
-
-  .progress-slider {
-    width: 100%;
-    height: 8px;
-    -webkit-appearance: none;
-    appearance: none;
-    background: var(--color-neu-base);
-    border-radius: 9999px;
-    box-shadow: inset -3px -3px 6px #FFFFFF, inset 3px 3px 6px #D1D9E6;
-    outline: none;
-  }
-
-  .progress-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--color-primary);
-    box-shadow: -4px -4px 8px #FFFFFF, 4px 4px 8px #D1D9E6;
-    cursor: pointer;
-    border: none;
-  }
-
-  .progress-slider-labels {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 0.25rem;
-    font-family: Inter, sans-serif;
-    font-size: 0.75rem;
-    color: var(--color-outline);
-  }
-
-  /* Preview project progress */
-  .preview-project-progress {
-    font-size: 0.8rem;
-    color: var(--color-primary);
-    font-weight: 500;
-  }
-
   /* Preview achievements text */
   .preview-achievements-text {
     font-size: 0.85rem;
     color: var(--color-on-surface-variant);
-  }
-
-  /* ── GitHub prefix input ── */
-  .neu-input-wrap .neu-input-prefix {
-    position: absolute;
-    left: 0.75rem;
-    font-size: 0.8rem;
-    color: var(--color-outline);
-    pointer-events: none;
-    font-family: var(--font-body);
-    white-space: nowrap;
-  }
-
-  .neu-input-with-prefix {
-    padding-left: 7rem !important;
   }
 
   /* ── Milestone rows ── */
@@ -1714,9 +1387,8 @@ try {
     box-shadow: var(--shadow-extruded-sm);
   }
 
-  .milestone-title { flex: 2; }
-  .milestone-issuer { flex: 2; }
-  .milestone-url { flex: 3; }
+  .milestone-title { flex: 1; }
+  .milestone-issuer { flex: 1; }
 
   .milestone-remove-btn {
     width: 32px;
@@ -1807,7 +1479,7 @@ try {
       flex-direction: column;
       gap: 0.35rem;
     }
-    .milestone-title, .milestone-issuer, .milestone-url { flex: 1; width: 100%; }
+    .milestone-title, .milestone-issuer { flex: 1; width: 100%; }
     .discard-modal { padding: 1.5rem; width: 85%; }
     .discard-modal-title { font-size: 1.1rem; }
   }

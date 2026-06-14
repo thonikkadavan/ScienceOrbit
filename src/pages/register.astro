@@ -86,11 +86,15 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <label for="tier-campus">Campus</label>
               <select id="tier-campus" required></select>
             </div>
+            <div class="form-group is-hidden" id="batch-group">
+              <label for="batch">Madeenathunnoor Batch Number</label>
+              <select id="batch" required></select>
+            </div>
             <div class="form-group is-hidden" id="course-group">
               <label for="course-name">Course / Subject</label>
               <input type="text" id="course-name" placeholder="e.g. BSc Physics, MA History, PhD CS" />
             </div>
-            <div class="step-actions" style="margin-top:110px">
+            <div class="step-actions" style="margin-top:80px">
               <button type="button" class="btn-neu btn-prev" data-prev="2">← Back</button>
               <button type="button" class="btn-neu btn-next" data-next="4">Next Step →</button>
             </div>
@@ -321,6 +325,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     password: "",
     academicTier: "",
     campusName: "",
+    batch: "",
     courseName: "",
     achievements: "",
     biography: "",
@@ -376,6 +381,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       case 3:
         state.academicTier = document.getElementById("academic-tier").value;
         state.campusName = document.getElementById("tier-campus").value;
+        state.batch = document.getElementById("batch").value;
         state.courseName = document.getElementById("course-name").value.trim();
         break;
       case 4:
@@ -402,10 +408,12 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         break;
       case 3:
         document.getElementById("academic-tier").value = state.academicTier;
-        // Trigger tier change to populate campus
         document.getElementById("academic-tier").dispatchEvent(new Event("change"));
         if (state.campusName) {
           document.getElementById("tier-campus").value = state.campusName;
+        }
+        if (state.batch) {
+          document.getElementById("batch").value = state.batch;
         }
         document.getElementById("course-name").value = state.courseName;
         break;
@@ -489,6 +497,11 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           errorMsg.textContent = "Please select your academic tier.";
           return false;
         }
+        if (!document.getElementById("batch").value) {
+          document.getElementById("batch").closest(".form-group").classList.add("field-error");
+          errorMsg.textContent = "Please select your batch.";
+          return false;
+        }
         if (tier === "JUNIOR" || tier === "FOUNDATION") {
           if (!document.getElementById("tier-campus").value) {
             document.getElementById("tier-campus").closest(".form-group").classList.add("field-error");
@@ -519,16 +532,25 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     }
   }
 
-  // ── Academic tier → conditional campus/course ──
+  // ── Academic tier → conditional campus/course/batch ──
+  function getBatches(tier) {
+    const max = tier === "FOUNDATION" ? 26 : 29;
+    return Array.from({ length: max }, (_, i) => String(i + 1));
+  }
+
   document.getElementById("academic-tier")?.addEventListener("change", () => {
     const tier = document.getElementById("academic-tier").value;
     const campusGroup = document.getElementById("tier-campus-group");
     const campusSelect = document.getElementById("tier-campus");
+    const batchGroup = document.getElementById("batch-group");
+    const batchSelect = document.getElementById("batch");
     const courseGroup = document.getElementById("course-group");
 
     campusGroup.classList.remove("visible");
+    batchGroup.classList.remove("visible");
     courseGroup.classList.remove("visible");
     campusSelect.innerHTML = "";
+    batchSelect.innerHTML = "";
 
     if (tier === "JUNIOR") {
       JUNIOR_CAMPUSES.forEach((c) => {
@@ -547,6 +569,19 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     } else if (["UG","PG","PHD"].includes(tier)) {
       document.getElementById("course-name").required = true;
       courseGroup.classList.add("visible");
+    }
+
+    // Populate batch
+    const batches = getBatches(tier);
+    if (batches.length) {
+      const emptyOpt = document.createElement("option"); emptyOpt.value = ""; emptyOpt.textContent = "— Select the Madeenathunnoor batch number —";
+      batchSelect.appendChild(emptyOpt);
+      batches.forEach((b) => {
+        const opt = document.createElement("option"); opt.value = b; opt.textContent = `Batch ${b}`;
+        batchSelect.appendChild(opt);
+      });
+      batchSelect.required = true;
+      batchGroup.classList.add("visible");
     }
   });
 
@@ -642,6 +677,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             phone: state.phone,
             academic_tier: state.academicTier,
             course_name: state.courseName || "",
+            batch: state.batch || "",
           },
         },
       });
@@ -659,6 +695,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         const updates = {
           academic_tier: state.academicTier,
           course_name: state.courseName || null,
+          batch: state.batch || null,
           achievements: state.achievements || null,
           biography: state.biography || null,
           job_title: state.jobTitle || null,

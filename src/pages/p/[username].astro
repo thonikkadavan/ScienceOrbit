@@ -56,16 +56,7 @@ const achievementsList = profile.achievements
           {campusName}
           {campusName && profile.mentor_name ? " | " : ""}
           {profile.mentor_name || ""}
-          {(!campusName && profile.mentor_name) ? "" : ""}
-          {profile.subjects?.length ? ` | ${profile.subjects.slice(0, 3).join(", ")}${profile.subjects.length > 3 ? "..." : ""}` : ""}
         </p>
-        {profile.subjects && profile.subjects.length > 0 && (
-          <div class="pp-subjects">
-            {profile.subjects.map((s) => (
-              <span class="pp-subject-chip">{s}</span>
-            ))}
-          </div>
-        )}
         <button class="pp-resume-btn">
           <span class="material-symbols-outlined">download</span>
           Download Resume
@@ -252,25 +243,6 @@ const achievementsList = profile.achievements
     color: var(--color-on-surface-variant);
     margin-bottom: 1rem;
     line-height: 1.5;
-  }
-
-  .pp-subjects {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    justify-content: center;
-    margin-bottom: 1.5rem;
-  }
-
-  .pp-subject-chip {
-    font-family: var(--font-label);
-    font-size: 12px;
-    font-weight: 500;
-    padding: 0.35rem 0.9rem;
-    border-radius: var(--radius-full);
-    background: var(--color-surface-container-high);
-    color: var(--color-primary);
-    box-shadow: var(--shadow-extruded-sm);
   }
 
   .pp-resume-btn {

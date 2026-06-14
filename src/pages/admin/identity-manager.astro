@@ -20,11 +20,29 @@ if (!admin) return Astro.redirect("/login");
 
   <!-- Student Directory -->
   <div class="gov-panel active" id="panel-students">
-    <div class="gov-toolbar">
-      <div class="neu-input-wrap" style="flex:1;max-width:320px">
-        <input type="text" id="student-search" placeholder="Search by name, SO ID, phone..." />
+    <div class="filter-bar">
+      <div class="filter-toggle-row">
+        <div class="neu-input-wrap" style="flex:1;max-width:260px">
+          <input type="text" id="student-search" placeholder="Search by name, SO ID, phone..." />
+        </div>
+        <button class="btn-neu btn-neu-sm" id="toggle-filters" title="Toggle filters">
+          <span class="material-symbols-outlined" style="font-size:16px">filter_list</span> Filters
+        </button>
+        <button class="btn-neu btn-neu-sm" id="refresh-students">
+          <span class="material-symbols-outlined" style="font-size:16px">refresh</span> Refresh
+        </button>
       </div>
-      <button class="btn-neu btn-neu-sm" id="refresh-students"><span class="material-symbols-outlined" style="font-size:16px">refresh</span> Refresh</button>
+      <div class="filter-dropdowns" id="filter-dropdowns">
+        <div class="filter-group">
+          <select id="filter-campus" class="filter-select"><option value="">All Campuses</option></select>
+          <select id="filter-tier" class="filter-select"><option value="">All Tiers</option></select>
+          <select id="filter-batch" class="filter-select"><option value="">All Batches</option></select>
+          <select id="filter-status" class="filter-select"><option value="">All Status</option><option value="approved">Approved</option><option value="pending">Pending</option></select>
+          <button class="btn-neu btn-neu-sm" id="clear-filters">
+            <span class="material-symbols-outlined" style="font-size:14px">clear</span> Clear
+          </button>
+        </div>
+      </div>
     </div>
     <div id="students-container"><p class="loading">Loading student records...</p></div>
   </div>
@@ -79,6 +97,18 @@ if (!admin) return Astro.redirect("/login");
   .gov-panel { display:none; }
   .gov-panel.active { display:block; }
   .gov-toolbar { display:flex; gap:0.5rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap; }
+  .filter-bar { margin-bottom:1rem; }
+  .filter-toggle-row { display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; }
+  .filter-dropdowns { overflow:hidden; max-height:0; transition:max-height 0.25s ease, margin 0.25s ease; margin:0; }
+  .filter-dropdowns.open { max-height:200px; margin-top:0.65rem; }
+  .filter-group { display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center; }
+  .filter-select {
+    padding:0.45rem 0.65rem; border:none; border-radius:var(--radius-default); font-size:12px; font-weight:500;
+    background:transparent; box-shadow:var(--shadow-recessed-sm); color:var(--color-on-surface); cursor:pointer;
+    min-width:120px; font-family:var(--font-label); appearance:auto;
+  }
+  .filter-select:hover { box-shadow:var(--shadow-recessed); }
+  .filter-select:focus { box-shadow:var(--shadow-recessed),0 0 0 2px rgba(0,106,103,0.15); outline:none; }
   .gov-tab-slim { padding:0.4rem 1rem; border:none; background:transparent; color:var(--color-on-surface-variant); font-family:var(--font-label); font-size:12px; font-weight:600; cursor:pointer; letter-spacing:0.03em; transition:all 0.15s; border-radius:var(--radius-default); }
   .gov-tab-slim.active { box-shadow:var(--shadow-extruded-sm); color:var(--color-primary); }
   .gov-tab-slim:hover:not(.active) { color:var(--color-on-surface); }
@@ -124,6 +154,7 @@ if (!admin) return Astro.redirect("/login");
   .tier-badge.UG { background:#fef3c7; color:#b45309; }
   .tier-badge.PG { background:#e0e7ff; color:#4338ca; }
   .tier-badge.PHD { background:#fce7f3; color:#be185d; }
+  .pp-milestone-campus-badge { display:inline-block; font-size:10px; font-weight:600; padding:0.2rem 0.6rem; border-radius:9999px; background:var(--color-primary-container); color:var(--color-primary); }
 </style>
 
 <script>
@@ -150,6 +181,8 @@ if (!admin) return Astro.redirect("/login");
   }
   const supabase = getSupabase();
   let studentCache = [];
+  let campusCache = [];
+  let filterState = { campus: "", tier: "", batch: "", status: "" };
 
   document.querySelectorAll(".gov-tab").forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -167,14 +200,78 @@ if (!admin) return Astro.redirect("/login");
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, so_id, username, display_name, legal_name, father_name, phone, dasthar_url, is_approved, created_at, academic_tier, course_name, job_title, organisation, campuses(name)")
+        .select("id, so_id, username, display_name, legal_name, father_name, phone, dasthar_url, is_approved, created_at, academic_tier, batch, campus_id, course_name, job_title, organisation, campuses(name)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       studentCache = data || [];
-      renderStudents(filter || "");
+      populateFilters(studentCache);
+      restoreFilterValues();
+      renderStudents(document.getElementById("student-search")?.value || "");
     } catch (err) {
       console.error("StudentDirectory load:", err);
       container.innerHTML = `<div class="error-state">Failed to load: ${errMsg(err)}</div>`;
+    }
+  }
+
+  async function loadCampuses() {
+    try {
+      const { data } = await supabase.from("campuses").select("id, name").order("name");
+      campusCache = data || [];
+      const sel = document.getElementById("filter-campus");
+      if (sel) {
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">All Campuses</option>' + campusCache.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+        sel.value = campusCache.some(c => c.id === cur) ? cur : "";
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function getFilterValue(id) {
+    const el = document.getElementById(id);
+    return el ? el.value : "";
+  }
+
+  function setFilterValue(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  }
+
+  function saveFilterValues() {
+    filterState = {
+      campus: getFilterValue("filter-campus"),
+      tier: getFilterValue("filter-tier"),
+      batch: getFilterValue("filter-batch"),
+      status: getFilterValue("filter-status"),
+    };
+  }
+
+  function restoreFilterValues() {
+    setFilterValue("filter-campus", filterState.campus);
+    setFilterValue("filter-tier", filterState.tier);
+    setFilterValue("filter-batch", filterState.batch);
+    setFilterValue("filter-status", filterState.status);
+  }
+
+  function populateFilters(profiles) {
+    const tierSet = new Set();
+    const batchSet = new Set();
+    for (const p of profiles) {
+      if (p.academic_tier) tierSet.add(p.academic_tier);
+      if (p.batch) batchSet.add(p.batch);
+    }
+    const tierSel = document.getElementById("filter-tier");
+    if (tierSel) {
+      const cur = tierSel.value;
+      tierSel.innerHTML = '<option value="">All Tiers</option>' +
+        Array.from(tierSet).sort().map(t => `<option value="${t}">${escapeHtml(t)}</option>`).join("");
+      if (Array.from(tierSet).includes(cur)) tierSel.value = cur;
+    }
+    const batchSel = document.getElementById("filter-batch");
+    if (batchSel) {
+      const cur = batchSel.value;
+      batchSel.innerHTML = '<option value="">All Batches</option>' +
+        Array.from(batchSet).sort((a, b) => Number(a) - Number(b)).map(b => `<option value="${b}">Batch ${escapeHtml(b)}</option>`).join("");
+      if (Array.from(batchSet).includes(cur)) batchSel.value = cur;
     }
   }
 
@@ -182,17 +279,27 @@ if (!admin) return Astro.redirect("/login");
     const container = document.getElementById("students-container");
     if (!container) return;
     let list = studentCache;
-    if (filter) {
-      const f = filter.toLowerCase();
-      list = list.filter((p) =>
-        (p.so_id || "").toLowerCase().includes(f) ||
-        (p.legal_name || "").toLowerCase().includes(f) ||
-        (p.display_name || "").toLowerCase().includes(f) ||
-        (p.father_name || "").toLowerCase().includes(f) ||
-        (p.phone || "").toLowerCase().includes(f) ||
-        (p.username || "").toLowerCase().includes(f)
-      );
-    }
+    const textFilter = (filter || "").toLowerCase();
+    const campusFilter = getFilterValue("filter-campus");
+    const tierFilter = getFilterValue("filter-tier");
+    const batchFilter = getFilterValue("filter-batch");
+    const statusFilter = getFilterValue("filter-status");
+    list = list.filter((p) => {
+      if (textFilter && !(
+        (p.so_id || "").toLowerCase().includes(textFilter) ||
+        (p.legal_name || "").toLowerCase().includes(textFilter) ||
+        (p.display_name || "").toLowerCase().includes(textFilter) ||
+        (p.father_name || "").toLowerCase().includes(textFilter) ||
+        (p.phone || "").toLowerCase().includes(textFilter) ||
+        (p.username || "").toLowerCase().includes(textFilter)
+      )) return false;
+      if (campusFilter && p.campus_id !== campusFilter) return false;
+      if (tierFilter && p.academic_tier !== tierFilter) return false;
+      if (batchFilter && p.batch !== batchFilter) return false;
+      if (statusFilter === "approved" && !p.is_approved) return false;
+      if (statusFilter === "pending" && p.is_approved) return false;
+      return true;
+    });
     if (list.length === 0) {
       container.innerHTML = '<div class="empty-state">No student records found.</div>';
       return;
@@ -256,6 +363,26 @@ if (!admin) return Astro.redirect("/login");
     renderStudents(e.target.value);
   });
   document.getElementById("refresh-students")?.addEventListener("click", () => loadStudents(""));
+
+  // Filter toggle
+  document.getElementById("toggle-filters")?.addEventListener("click", () => {
+    document.getElementById("filter-dropdowns")?.classList.toggle("open");
+  });
+
+  // Clear all filters
+  document.getElementById("clear-filters")?.addEventListener("click", () => {
+    filterState = { campus: "", tier: "", batch: "", status: "" };
+    restoreFilterValues();
+    renderStudents(document.getElementById("student-search")?.value || "");
+  });
+
+  // Filter change → save state + re-render
+  document.querySelectorAll("#filter-campus, #filter-tier, #filter-batch, #filter-status").forEach((el) => {
+    el.addEventListener("change", () => {
+      saveFilterValues();
+      renderStudents(document.getElementById("student-search")?.value || "");
+    });
+  });
 
   /* ── Verification Drawer ── */
   function openVerifyDrawer(student) {
@@ -585,7 +712,7 @@ if (!admin) return Astro.redirect("/login");
             <th>Student ID</th>
             <th>Name</th>
             <th>Milestone</th>
-            <th>Proof</th>
+            <th>Campus</th>
             <th>Status</th>
             <th>Action</th>
           </tr></thead>
@@ -595,10 +722,7 @@ if (!admin) return Astro.redirect("/login");
                 <td><code style="color:var(--color-primary)">${escapeHtml(r.username)}</code></td>
                 <td><strong>${escapeHtml(r.displayName)}</strong></td>
                 <td>${escapeHtml(r.title)}</td>
-                <td>${r.credentialUrl
-                  ? `<a href="${escapeHtml(r.credentialUrl)}" target="_blank" class="btn-neu btn-neu-sm" style="text-decoration:none;font-size:11px"><span class="material-symbols-outlined" style="font-size:14px">open_in_new</span> View</a>`
-                  : '<span style="color:var(--color-on-surface-variant);font-size:12px">No proof</span>'
-                }</td>
+                <td><span class="pp-milestone-campus-badge">${escapeHtml(r.campus)}</span></td>
                 <td>
                   <span class="status-badge">
                     <span class="status-dot ${r.isVerified ? "approved" : "pending"}"></span>
@@ -660,6 +784,7 @@ if (!admin) return Astro.redirect("/login");
   });
   document.getElementById("refresh-achievements")?.addEventListener("click", loadAchievements);
 
+  loadCampuses();
   loadStudents("");
   loadMentors();
   loadAchievements();

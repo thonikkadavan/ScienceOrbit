@@ -18,6 +18,27 @@ const campuses = (
     <h1>Student Directory</h1>
     <p class="subtitle">Manage all registered students across planetary campuses.</p>
 
+    <div class="filter-bar">
+      <div class="filter-toggle-row">
+        <button class="btn-neu btn-neu-sm" id="toggle-filters" title="Toggle filters">
+          <span class="material-symbols-outlined" style="font-size:16px">filter_list</span> Filters
+        </button>
+        <button class="btn-neu btn-neu-sm" id="refresh-students">
+          <span class="material-symbols-outlined" style="font-size:16px">refresh</span> Refresh
+        </button>
+      </div>
+      <div class="filter-dropdowns" id="filter-dropdowns">
+        <div class="filter-group">
+          <select id="filter-campus" class="filter-select"><option value="">All Campuses</option></select>
+          <select id="filter-tier" class="filter-select"><option value="">All Tiers</option></select>
+          <select id="filter-batch" class="filter-select"><option value="">All Batches</option></select>
+          <select id="filter-status" class="filter-select"><option value="">All Status</option><option value="approved">Approved</option><option value="pending">Pending</option></select>
+          <button class="btn-neu btn-neu-sm" id="clear-filters">
+            <span class="material-symbols-outlined" style="font-size:14px">clear</span> Clear
+          </button>
+        </div>
+      </div>
+    </div>
     <div id="students-container">
       <p class="loading">Loading...</p>
     </div>
@@ -35,87 +56,127 @@ const campuses = (
     );
   }
 
+  let studentCache = [];
+  let filterStateSD = { campus: "", tier: "", batch: "", status: "" };
+
+  function getFilterVal(id) { const el = document.getElementById(id); return el ? el.value : ""; }
+  function setFilterVal(id, v) { const el = document.getElementById(id); if (el) el.value = v; }
+  function saveFilterState() { filterStateSD = { campus: getFilterVal("filter-campus"), tier: getFilterVal("filter-tier"), batch: getFilterVal("filter-batch"), status: getFilterVal("filter-status") }; }
+  function restoreFilterState() { setFilterVal("filter-campus", filterStateSD.campus); setFilterVal("filter-tier", filterStateSD.tier); setFilterVal("filter-batch", filterStateSD.batch); setFilterVal("filter-status", filterStateSD.status); }
+
+  function initFiltersFromData() {
+    const campusesData = JSON.parse(document.getElementById('campuses-data')?.getAttribute('data-campuses') || '[]');
+    const campusSel = document.getElementById("filter-campus");
+    if (campusSel) campusSel.innerHTML = '<option value="">All Campuses</option>' + campusesData.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+
+    const tierSet = new Set(), batchSet = new Set();
+    for (const p of studentCache) { if (p.academic_tier) tierSet.add(p.academic_tier); if (p.batch) batchSet.add(p.batch); }
+    const tierSel = document.getElementById("filter-tier");
+    if (tierSel) tierSel.innerHTML = '<option value="">All Tiers</option>' + Array.from(tierSet).sort().map(t => `<option value="${t}">${escapeHtml(t)}</option>`).join("");
+    const batchSel = document.getElementById("filter-batch");
+    if (batchSel) batchSel.innerHTML = '<option value="">All Batches</option>' + Array.from(batchSet).sort((a, b) => Number(a) - Number(b)).map(b => `<option value="${b}">Batch ${escapeHtml(b)}</option>`).join("");
+    restoreFilterState();
+  }
+
+  function renderStudentsTable() {
+    const container = document.getElementById("students-container");
+    if (!container) return;
+    let list = studentCache;
+    const cf = getFilterVal("filter-campus"), tf = getFilterVal("filter-tier"), bf = getFilterVal("filter-batch"), sf = getFilterVal("filter-status");
+    list = list.filter(p => {
+      if (cf && p.campus_id !== cf) return false;
+      if (tf && p.academic_tier !== tf) return false;
+      if (bf && p.batch !== bf) return false;
+      if (sf === "approved" && !p.is_approved) return false;
+      if (sf === "pending" && p.is_approved) return false;
+      return true;
+    });
+    if (list.length === 0) {
+      container.innerHTML = '<div class="empty-state">No students match the current filters.</div>';
+      return;
+    }
+    container.innerHTML = `
+      <div style="margin-bottom:0.5rem;font-size:12px;color:var(--color-on-surface-variant)">${list.length} student${list.length === 1 ? "" : "s"}</div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Legal Name</th>
+              <th>Campus</th>
+              <th>Status</th>
+              <th style="text-align:right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${list.map((p) => `
+              <tr data-id="${p.id}">
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px">
+                    ${getAvatarSrc(p.id, p.avatar_url)
+                      ? `<img src="${getAvatarSrc(p.id, p.avatar_url)}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;background:var(--color-surface-variant)" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />`
+                      : ""
+                    }
+                    <div style="display:flex;flex-direction:column">
+                      <strong style="color:var(--color-primary-fixed)">${escapeHtml(p.display_name || p.legal_name || "—")}</strong>
+                      <span style="font-size:12px;color:var(--color-on-surface-variant)">@${escapeHtml(p.username)}</span>
+                    </div>
+                  </div>
+                </td>
+                <td class="editable-name">
+                  <span class="name-display">${escapeHtml(p.legal_name || "\u2014")}</span>
+                  <input class="name-input" style="display:none" value="${escapeHtml(p.legal_name || "")}" />
+                </td>
+                <td>
+                  <span class="campus-display campus-tag">${escapeHtml(p.campuses?.name || "No Campus Assigned")}</span>
+                  <select class="campus-select" style="display:none">
+                    ${JSON.parse(document.getElementById('campuses-data').getAttribute('data-campuses'))
+                      .map((c) => `<option value="${c.id}" ${c.id === p.campus_id ? "selected" : ""}>${escapeHtml(c.name)}</option>`)
+                      .join("")}
+                  </select>
+                </td>
+                <td>
+                  <div class="status-badge">
+                    <span class="status-dot ${p.is_approved ? "approved" : "pending"}"></span>
+                    <span class="status-label ${p.is_approved ? "approved" : "pending"}">${p.is_approved ? "Approved" : "Pending"}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="action-btns">
+                    <button class="btn-icon-neu btn-edit-name" title="Edit Name"><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
+                    <button class="btn-icon-neu btn-edit-campus" title="Edit Campus"><span class="material-symbols-outlined" style="font-size:18px">domain</span></button>
+                    <button class="btn-icon-neu btn-save" style="display:none"><span class="material-symbols-outlined" style="font-size:18px">check</span></button>
+                    <button class="btn-icon-neu btn-cancel" style="display:none"><span class="material-symbols-outlined" style="font-size:18px">close</span></button>
+                    <button class="btn-icon-neu danger btn-delete" title="Delete User"><span class="material-symbols-outlined" style="font-size:18px">delete</span></button>
+                  </div>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+    attachHandlers();
+  }
+
   async function loadStudents() {
     const container = document.getElementById("students-container");
     if (!container) return;
-
     try {
       const supabase = await getSupabase();
-
       const { data, error } = await supabase
         .from("profiles")
-        .select("*, campuses(name)")
+        .select("id, username, legal_name, campus_id, batch, academic_tier, is_approved, avatar_url, created_at, campuses(name)")
         .eq("is_admin", false)
         .order("created_at", { ascending: false });
-
       if (error) throw error;
-
       if (!data || data.length === 0) {
-        container.innerHTML =
-          '<div class="empty-state">No students registered yet.</div>';
+        container.innerHTML = '<div class="empty-state">No students registered yet.</div>';
         return;
       }
-
-      container.innerHTML = `
-        <div class="data-table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Username</th>
-                <th>Legal Name</th>
-                <th>Campus</th>
-                <th>Status</th>
-                <th style="text-align:right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data
-                .map(
-                  (p) => `
-                <tr data-id="${p.id}">
-                  <td><strong style="color:var(--color-primary-fixed)">@${escapeHtml(p.username)}</strong></td>
-                  <td class="editable-name">
-                    <span class="name-display">${escapeHtml(p.legal_name || "\u2014")}</span>
-                    <input class="name-input" style="display:none" value="${escapeHtml(p.legal_name || "")}" />
-                  </td>
-                  <td>
-                    <span class="campus-display campus-tag">${escapeHtml(p.campuses?.name || "\u2014")}</span>
-                    <select class="campus-select" style="display:none">
-                      ${JSON.parse(document.getElementById('campuses-data').getAttribute('data-campuses'))
-                        .map(
-                          (c) =>
-                            `<option value="${c.id}" ${c.id === p.campus_id ? "selected" : ""}>${escapeHtml(c.name)}</option>`
-                        )
-                        .join("")}
-                    </select>
-                  </td>
-                  <td>
-                    <div class="status-badge">
-                      <span class="status-dot ${p.is_approved ? "approved" : "pending"}"></span>
-                      <span class="status-label ${p.is_approved ? "approved" : "pending"}">
-                        ${p.is_approved ? "Approved" : "Pending"}
-                      </span>
-                    </div>
-                  </td>
-                  <td>
-                    <div class="action-btns">
-                      <button class="btn-icon-neu btn-edit-name" title="Edit Name"><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
-                      <button class="btn-icon-neu btn-edit-campus" title="Edit Campus"><span class="material-symbols-outlined" style="font-size:18px">domain</span></button>
-                      <button class="btn-icon-neu btn-save" style="display:none"><span class="material-symbols-outlined" style="font-size:18px">check</span></button>
-                      <button class="btn-icon-neu btn-cancel" style="display:none"><span class="material-symbols-outlined" style="font-size:18px">close</span></button>
-                      <button class="btn-icon-neu danger btn-delete" title="Delete User"><span class="material-symbols-outlined" style="font-size:18px">delete</span></button>
-                    </div>
-                  </td>
-                </tr>
-              `
-                )
-                .join("")}
-            </tbody>
-          </table>
-        </div>
-      `;
-
-      attachHandlers();
+      studentCache = data || [];
+      initFiltersFromData();
+      renderStudentsTable();
     } catch (err) {
       container.innerHTML = `<div class="error-state">Failed to load: ${err instanceof Error ? err.message : "Unknown error"}</div>`;
     }
@@ -267,6 +328,16 @@ const campuses = (
     row.querySelector(".btn-cancel").style.display = "none";
   }
 
+  function getAvatarSrc(id, path) {
+    if (!path) return "";
+    if (path.startsWith("http")) return path;
+    const sb = createBrowserClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+    );
+    return sb.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+  }
+
   function escapeHtml(str) {
     if (!str) return "";
     const div = document.createElement("div");
@@ -275,4 +346,56 @@ const campuses = (
   }
 
   loadStudents();
+
+  document.getElementById("toggle-filters")?.addEventListener("click", () => {
+    const dd = document.getElementById("filter-dropdowns");
+    if (dd) dd.classList.toggle("open");
+  });
+  document.getElementById("clear-filters")?.addEventListener("click", () => {
+    const ids = ["filter-campus", "filter-tier", "filter-batch", "filter-status"];
+    ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+    filterStateSD = { campus: "", tier: "", batch: "", status: "" };
+    renderStudentsTable();
+  });
+  document.getElementById("refresh-students")?.addEventListener("click", () => { saveFilterState(); loadStudents(); });
+  ["filter-campus", "filter-tier", "filter-batch", "filter-status"].forEach(id => {
+    document.getElementById(id)?.addEventListener("change", renderStudentsTable);
+  });
 </script>
+
+<style>
+  .filter-bar { margin-bottom: 1.5rem; }
+  .filter-toggle-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+  .filter-toggle-row button { display: inline-flex; align-items: center; gap: 0.35rem; }
+  .filter-dropdowns { display: none; }
+  .filter-dropdowns.open { display: block; }
+  .filter-group { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+  .filter-select {
+    background: var(--color-surface);
+    border: none;
+    border-radius: 8px;
+    padding: 0.45rem 0.75rem;
+    font-size: 13px;
+    color: var(--color-on-surface);
+    box-shadow: inset 2px 2px 5px var(--shadow-dark), inset -2px -2px 5px var(--shadow-light);
+    appearance: auto;
+  }
+  .filter-select:focus { outline: 2px solid var(--color-primary); }
+  .name-input, .campus-select {
+    background: var(--color-surface);
+    border: none;
+    border-radius: 6px;
+    padding: 0.3rem 0.5rem;
+    font-size: 13px;
+    color: var(--color-on-surface);
+    box-shadow: inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light);
+  }
+  .campus-tag {
+    display: inline-block;
+    background: var(--color-surface);
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+</style>
