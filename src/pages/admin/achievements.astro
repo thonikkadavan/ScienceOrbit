@@ -1,0 +1,194 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { createClient } from "../../lib/supabase";
+import { requireAdmin } from "../../lib/admin-auth";
+
+const supabase = createClient({ request: Astro.request, cookies: Astro.cookies });
+const admin = await requireAdmin(supabase);
+if (!admin) return Astro.redirect("/login");
+---
+
+<AdminLayout title="Achievement Showcase" activeTab="achievements">
+  <h1>Achievement Showcase</h1>
+  <p class="subtitle">Curate achievements displayed on every student dashboard</p>
+
+  <div class="neu-card" style="margin-bottom:1rem">
+    <form id="achievement-form" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+      <div class="neu-input-wrap" style="grid-column:1/-1">
+        <input type="text" id="ach-title" required placeholder="Achievement title..." />
+      </div>
+      <div class="neu-input-wrap" style="grid-column:1/-1">
+        <input type="text" id="ach-desc" placeholder="Short description..." />
+      </div>
+      <div class="neu-input-wrap">
+        <input type="text" id="ach-icon" placeholder="Material icon name (e.g. emoji_events)" value="emoji_events" />
+      </div>
+      <div class="neu-input-wrap">
+        <input type="text" id="ach-image" placeholder="Image URL (optional)" />
+      </div>
+      <div style="grid-column:1/-1;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+        <button type="submit" class="btn-neu" id="ach-submit"><span class="material-symbols-outlined" style="font-size:16px">add</span> Add Achievement</button>
+        <button type="button" class="btn-neu danger" id="ach-cancel" style="display:none"><span class="material-symbols-outlined" style="font-size:16px">close</span> Cancel</button>
+        <span id="ach-form-id" style="display:none"></span>
+      </div>
+      <p id="ach-error" class="error-msg" style="grid-column:1/-1"></p>
+    </form>
+  </div>
+
+  <div id="achievements-container"><p class="loading">Loading achievements...</p></div>
+</AdminLayout>
+
+<style is:global>
+  .ach-icon-preview { font-size: 32px; color: var(--color-primary); }
+  .ach-image-sm { width: 48px; height: 48px; border-radius: var(--radius-sm); object-fit: cover; }
+</style>
+
+<script>
+  import { createBrowserClient } from "@supabase/ssr";
+  function getSupabase() {
+    return createBrowserClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+    );
+  }
+  function escapeHtml(str) {
+    if (!str) return "";
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+  function errMsg(err) {
+    return err instanceof Error ? err.message : typeof err === "string" ? err : "Request failed.";
+  }
+
+  const supabase = getSupabase();
+
+  async function loadAchievements() {
+    const container = document.getElementById("achievements-container");
+    if (!container) return;
+    try {
+      const { data, error } = await supabase
+        .from("achievement_showcase")
+        .select("*")
+        .order("display_order")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="empty-state">No achievements yet. Add one above.</div>';
+        return;
+      }
+      container.innerHTML = `
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Order</th><th>Icon</th><th>Title</th><th>Active</th><th>Action</th></tr></thead>
+            <tbody>
+              ${data.map((a) => `
+                <tr>
+                  <td><input class="order-input name-input" type="number" data-id="${a.id}" value="${a.display_order}" style="width:60px" /></td>
+                  <td>
+                    ${a.image_url ? `<img src="${escapeHtml(a.image_url)}" alt="" class="ach-image-sm" />` : `<span class="material-symbols-outlined ach-icon-preview">${escapeHtml(a.icon)}</span>`}
+                  </td>
+                  <td><strong>${escapeHtml(a.title)}</strong><br /><small style="color:var(--color-on-surface-variant)">${escapeHtml(a.description || "—")}</small></td>
+                  <td><span class="status-badge"><span class="status-dot ${a.is_active ? "approved" : "pending"}"></span><span class="status-label ${a.is_active ? "approved" : "pending"}">${a.is_active ? "Active" : "Inactive"}</span></span></td>
+                  <td>
+                    <div class="action-btns">
+                      <button class="btn-icon-neu" data-action="edit" data-id="${a.id}" title="Edit"><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
+                      <button class="btn-icon-neu" data-action="toggle" data-id="${a.id}" data-active="${a.is_active}" title="Toggle active"><span class="material-symbols-outlined" style="font-size:18px">${a.is_active ? "visibility_off" : "visibility"}</span></button>
+                      <button class="btn-icon-neu danger" data-action="delete" data-id="${a.id}" title="Delete"><span class="material-symbols-outlined" style="font-size:18px">delete</span></button>
+                    </div>
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+      container.querySelectorAll("[data-action]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const action = btn.getAttribute("data-action");
+          const id = btn.getAttribute("data-id");
+          if (action === "edit") {
+            const { data: ach } = await supabase.from("achievement_showcase").select("*").eq("id", id).single();
+            if (!ach) return;
+            document.getElementById("ach-title").value = ach.title;
+            document.getElementById("ach-desc").value = ach.description || "";
+            document.getElementById("ach-icon").value = ach.icon || "emoji_events";
+            document.getElementById("ach-image").value = ach.image_url || "";
+            document.getElementById("ach-form-id").textContent = id;
+            document.getElementById("ach-submit").innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">save</span> Update';
+            document.getElementById("ach-cancel").style.display = "";
+            document.getElementById("ach-submit").scrollIntoView({ behavior: "smooth" });
+            return;
+          }
+          btn.disabled = true;
+          try {
+            if (action === "toggle") {
+              const active = btn.getAttribute("data-active") === "true";
+              await supabase.from("achievement_showcase").update({ is_active: !active }).eq("id", id);
+            } else if (action === "delete") {
+              if (!confirm("Delete this achievement?")) { btn.disabled = false; return; }
+              await supabase.from("achievement_showcase").delete().eq("id", id);
+            }
+            loadAchievements();
+          } catch (err) {
+            console.error("Ach action:", err);
+            btn.disabled = false;
+            alert("Failed: " + errMsg(err));
+          }
+        });
+      });
+      container.querySelectorAll(".order-input").forEach((inp) => {
+        inp.addEventListener("change", async () => {
+          const id = inp.getAttribute("data-id");
+          const val = parseInt(inp.value) || 0;
+          await supabase.from("achievement_showcase").update({ display_order: val }).eq("id", id);
+        });
+      });
+    } catch (err) {
+      console.error("loadAchievements:", err);
+      container.innerHTML = `<div class="error-state">Failed to load: ${errMsg(err)}</div>`;
+    }
+  }
+
+  document.getElementById("achievement-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = document.getElementById("ach-title").value.trim();
+    const desc = document.getElementById("ach-desc").value.trim();
+    const icon = document.getElementById("ach-icon").value.trim() || "emoji_events";
+    const image = document.getElementById("ach-image").value.trim();
+    const formId = document.getElementById("ach-form-id").textContent;
+    const errorEl = document.getElementById("ach-error");
+    if (!title) return;
+    const submitBtn = document.getElementById("ach-submit");
+    submitBtn.disabled = true;
+    errorEl.textContent = "";
+    try {
+      if (formId) {
+        await supabase.from("achievement_showcase").update({ title, description: desc, icon, image_url: image }).eq("id", formId);
+      } else {
+        await supabase.from("achievement_showcase").insert({ title, description: desc, icon, image_url: image });
+      }
+      document.getElementById("achievement-form").reset();
+      document.getElementById("ach-form-id").textContent = "";
+      document.getElementById("ach-submit").innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">add</span> Add Achievement';
+      document.getElementById("ach-cancel").style.display = "none";
+      document.getElementById("ach-icon").value = "emoji_events";
+      loadAchievements();
+    } catch (err) {
+      console.error("Ach submit:", err);
+      errorEl.textContent = errMsg(err);
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+
+  document.getElementById("ach-cancel")?.addEventListener("click", () => {
+    document.getElementById("achievement-form").reset();
+    document.getElementById("ach-form-id").textContent = "";
+    document.getElementById("ach-submit").innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">add</span> Add Achievement';
+    document.getElementById("ach-cancel").style.display = "none";
+    document.getElementById("ach-icon").value = "emoji_events";
+  });
+
+  loadAchievements();
+</script>

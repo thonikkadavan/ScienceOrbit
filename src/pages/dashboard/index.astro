@@ -128,6 +128,14 @@ const gridEvents = upcomingEvents.filter((e) => !featuredEvent || e.id !== featu
 const myCalendarEvents = allEvents.filter((e) => registeredIds.has(e.id) && e.event_date >= now);
 const pinnedEvents = allEvents.filter((e) => e.is_pinned);
 
+/* ── Achievement Showcase ── */
+const { data: showcaseAchievements } = await supabase
+  .from("achievement_showcase")
+  .select("*")
+  .eq("is_active", true)
+  .order("display_order")
+  .order("created_at", { ascending: false });
+
 /* ── Settings data ── */
 const achievementsList = profile.achievements
   ? profile.achievements.split("\n").filter(Boolean)
@@ -192,6 +200,7 @@ if (sessionUser && userPostIds.length) {
           avatarUrl={avatarUrl}
           supabasePublicUrl={supabasePublicUrl}
           pinnedEvents={pinnedEvents}
+          showcaseAchievements={showcaseAchievements || []}
         />
       </div>
 
