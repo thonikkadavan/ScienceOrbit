@@ -9,9 +9,10 @@ export interface Props {
   avatarUrl: string | null;
   supabasePublicUrl: string;
   pinnedEvents?: any[];
+  pinnedPosts?: any[];
 }
 
-const { postsWithAuthors, likeCountMap, likedPosts, sessionUser, profile, recommendedUsers, avatarUrl, supabasePublicUrl, pinnedEvents = [] } = Astro.props;
+const { postsWithAuthors, likeCountMap, likedPosts, sessionUser, profile, recommendedUsers, avatarUrl, supabasePublicUrl, pinnedEvents = [], pinnedPosts = [] } = Astro.props;
 
 function pubUrl(path: string | null): string | null {
   if (!path) return null;
@@ -153,7 +154,58 @@ function getTimeAgo(dateStr: string | null): string {
           </article>
         ))}
         {pinnedEvents.length > 0 ? <hr class="pe-divider" /> : null}
-        {postsWithAuthors.length === 0 && (
+        {pinnedPosts.length > 0 ? (
+          <>
+            <div class="ppin-label"><span class="material-symbols-outlined" style="font-size:16px">keep</span> Pinned Posts</div>
+            {pinnedPosts.map((post) => {
+              const author = post.author;
+              const authorAvatar = pubUrl(author?.dasthar_url);
+              const timeAgo = getTimeAgo(post.created_at);
+              return (
+              <article class="feed-post pinned-post-card" data-post-id={post.id}>
+                <div class="ppin-badge"><span class="material-symbols-outlined">keep</span> Pinned</div>
+                <div class="post-header">
+                  <a href={`/dashboard?user=${post.user_id}&tab=portfolio`} class="post-author">
+                    <div class="post-avatar">
+                      {authorAvatar ? (
+                        <img src={authorAvatar} alt="" class="post-avatar-img" />
+                      ) : (
+                        <span class="material-symbols-outlined">account_circle</span>
+                      )}
+                    </div>
+                    <div class="post-author-info">
+                      <strong class="post-author-name">{author?.display_name || author?.username || "Unknown"}</strong>
+                      <span class="post-author-meta">{timeAgo}</span>
+                    </div>
+                  </a>
+                  {profile && post.user_id === profile.id && (
+                    <button class="post-menu-btn post-delete-btn" data-post-id={post.id} aria-label="Delete post">
+                      <span class="material-symbols-outlined">delete</span>
+                    </button>
+                  )}
+                </div>
+                <div class="post-body">
+                  {post.title ? <h4 class="post-title">{post.title}</h4> : null}
+                  {post.content ? <p class="post-text">{post.content}</p> : null}
+                  {post.image_url ? <img src={post.image_url} class="post-image" alt="" loading="lazy" /> : null}
+                  {post.file_url ? <a href={post.file_url} target="_blank" class="post-attach-link"><span class="material-symbols-outlined">description</span> {post.file_name || "Attachment"}</a> : null}
+                </div>
+                <div class="post-actions">
+                  <button class="post-action-btn post-like-btn" data-post-id={post.id} data-liked={likedPosts.has(post.id) ? "true" : "false"}>
+                    <span class="material-symbols-outlined post-like-icon">{likedPosts.has(post.id) ? "favorite" : "favorite_border"}</span>
+                    <span class="post-like-count">{likeCountMap.get(post.id) || 0}</span>
+                  </button>
+                  <button class="post-action-btn post-share-btn" data-post-url={`${supabasePublicUrl}/dashboard?user=${post.user_id}`} aria-label="Share post">
+                    <span class="material-symbols-outlined">share</span>
+                  </button>
+                </div>
+              </article>
+              );
+            })}
+            <hr class="ppin-divider" />
+          </>
+        ) : null}
+        {pinnedPosts.length === 0 && postsWithAuthors.length === 0 && (
           <p class="feed-empty">No posts yet. Be the first to share your findings!</p>
         )}
         {postsWithAuthors.map((post) => {
@@ -1392,6 +1444,48 @@ function getTimeAgo(dateStr: string | null): string {
   }
 
   .pe-divider {
+    border: none;
+    border-top: 1px solid var(--color-outline-variant);
+    margin: 1.25rem 0;
+  }
+
+  .pinned-post-card {
+    border: 1px solid var(--color-tertiary-container);
+    background: var(--color-surface-container-low);
+    position: relative;
+  }
+
+  .ppin-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--font-label);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-tertiary);
+    padding: 0.25rem 0.65rem;
+    margin: -0.75rem -0.75rem 0.5rem -0.75rem;
+    border-bottom: 1px solid var(--color-tertiary-container);
+    background: color-mix(in srgb, var(--color-tertiary-container) 40%, transparent);
+    border-radius: var(--radius-default) var(--radius-default) 0 0;
+  }
+
+  .ppin-badge .material-symbols-outlined {
+    font-size: 14px;
+  }
+
+  .ppin-label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--font-label);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-tertiary);
+    margin-bottom: 0.6rem;
+  }
+
+  .ppin-divider {
     border: none;
     border-top: 1px solid var(--color-outline-variant);
     margin: 1.25rem 0;

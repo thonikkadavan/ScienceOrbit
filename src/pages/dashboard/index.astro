@@ -61,25 +61,32 @@ const { data: recommendedUsers } = await supabase
   .order("id", { ascending: true })
   .range(randomOffset, randomOffset + 2);
 
-const { data: posts } = await supabase
+const { data: allPosts } = await supabase
   .from("posts")
-  .select("id, user_id, content, title, created_at, image_url, file_url, file_name")
-  .order("created_at", { ascending: false })
-  .range(0, 24);
+  .select("id, user_id, content, title, created_at, image_url, file_url, file_name, is_pinned, is_hidden")
+  .order("created_at", { ascending: false });
 
-const authorIds = [...new Set((posts || []).map((p) => p.user_id))];
+const visiblePosts = (allPosts || []).filter((p) => !p.is_hidden);
+const pinnedPosts = visiblePosts.filter((p) => p.is_pinned);
+const regularPosts = visiblePosts.filter((p) => !p.is_pinned);
+
+for (let i = regularPosts.length - 1; i > 0; i--) {
+  const j = Math.floor(Math.random() * (i + 1));
+  [regularPosts[i], regularPosts[j]] = [regularPosts[j], regularPosts[i]];
+}
+const sampledRegular = regularPosts.slice(0, 24);
+
+const feedPosts = [...pinnedPosts, ...sampledRegular];
+const authorIds = [...new Set(feedPosts.map((p) => p.user_id))];
 const { data: authors } = authorIds.length
   ? await supabase.from("profiles").select("id, username, display_name, dasthar_url").in("id", authorIds)
   : { data: [] };
 const authorMap = new Map((authors || []).map((a) => [a.id, a]));
-const postsWithAuthors = (posts || []).map((p) => ({ ...p, author: authorMap.get(p.user_id) || null }));
 
-for (let i = postsWithAuthors.length - 1; i > 0; i--) {
-  const j = Math.floor(Math.random() * (i + 1));
-  [postsWithAuthors[i], postsWithAuthors[j]] = [postsWithAuthors[j], postsWithAuthors[i]];
-}
+const pinnedPostsWithAuthors = pinnedPosts.map((p) => ({ ...p, author: authorMap.get(p.user_id) || null }));
+const regularPostsWithAuthors = sampledRegular.map((p) => ({ ...p, author: authorMap.get(p.user_id) || null }));
 
-const postIds = (posts || []).map((p) => p.id);
+const postIds = feedPosts.map((p) => p.id);
 const { data: likeCounts } = postIds.length
   ? await supabase.from("post_likes").select("post_id").in("post_id", postIds)
   : { data: [] };
@@ -175,7 +182,8 @@ if (sessionUser && userPostIds.length) {
     <main class="dash-main">
       <div class="dash-view" data-view="feed" style={activeTab !== "feed" ? "display:none" : ""}>
         <FeedView
-          postsWithAuthors={postsWithAuthors}
+          postsWithAuthors={regularPostsWithAuthors}
+          pinnedPosts={pinnedPostsWithAuthors}
           likeCountMap={likeCountMap}
           likedPosts={likedPosts}
           sessionUser={sessionUser}
