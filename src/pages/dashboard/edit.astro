@@ -3,7 +3,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import DashboardSidebar from "../../components/DashboardSidebar.astro";
 import { createClient } from "../../lib/supabase";
 import { getProfile } from "../../lib/auth";
-import type { Campus, Mentor } from "../../types/database";
+import type { Campus } from "../../types/database";
 
 const supabase = createClient({ request: Astro.request, cookies: Astro.cookies });
 const profile = await getProfile(supabase);
@@ -15,10 +15,6 @@ if (!profile) {
 const campuses = (
   await supabase.from("campuses").select("*").order("name")
 ).data as Campus[] | null;
-
-const mentors = (
-  await supabase.from("mentors").select("*").order("name")
-).data as Mentor[] | null;
 
 const avatarUrl = profile.dasthar_url
   ? supabase.storage.from("dasthar").getPublicUrl(profile.dasthar_url).data.publicUrl
@@ -178,19 +174,6 @@ try {
                 <div class="form-group" id="edit-course-group" style={["UG","PG","PHD"].includes(profile.academic_tier) ? "" : "display:none"}>
                   <label for="course_name">Course Name / Subject</label>
                   <input type="text" id="course_name" class="neu-input" placeholder="e.g. BSc Physics, MA History" value={profile.course_name || ""} />
-                </div>
-
-                <div class="form-group">
-                  <label for="mentor_id">Academic Mentor / Supervisor</label>
-                  <div class="neu-input-wrap">
-                    <span class="material-symbols-outlined neu-input-icon">school</span>
-                    <select id="mentor_id" class="neu-input neu-input-iconed">
-                      <option value="">Select mentor...</option>
-                      {mentors?.map((m) => (
-                        <option value={m.id} selected={profile.mentor_id === m.id}>{m.name}</option>
-                      ))}
-                    </select>
-                  </div>
                 </div>
 
                 <div class="form-group">
@@ -460,7 +443,6 @@ try {
       const displayName = document.getElementById("display_name").value.trim();
       const campusId = document.getElementById("campus_id").value;
       const mentorName = document.getElementById("mentor_name").value.trim();
-      const mentorId = document.getElementById("mentor_id").value;
       const academicTier = document.getElementById("academic_tier").value;
       const courseName = document.getElementById("course_name").value.trim();
       const jobTitle = document.getElementById("job_title").value.trim();
@@ -474,7 +456,6 @@ try {
           display_name: displayName,
           campus_id: campusId || null,
           mentor_name: mentorName,
-          mentor_id: mentorId || null,
           academic_tier: academicTier,
           course_name: courseName,
           job_title: jobTitle,
